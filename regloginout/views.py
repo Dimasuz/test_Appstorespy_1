@@ -169,10 +169,12 @@ class LoginAccount(APIView):
                     token, _ = Token.objects.get_or_create(user=user)
                     login(request, user)
                     return JsonResponse({'Status': True, 'Token': token.key})
+                else:
+                    JsonResponse({'Status': False, 'Errors': 'User is not active'}, status=403, )
 
-            return JsonResponse({'Status': False, 'Errors': 'Не удалось авторизовать'})
+            return JsonResponse({'Status': False, 'Errors': 'Не удалось авторизовать', 'User': user}, status=403,)
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status=403,)
 
 
 class LogoutAccount(APIView):
@@ -180,6 +182,7 @@ class LogoutAccount(APIView):
     Класс для логаута пользователей
     """
     def get(self, request):
+
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 

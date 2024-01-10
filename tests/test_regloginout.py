@@ -1,55 +1,38 @@
 import pytest
 import warnings
 
+from rest_framework.authtoken.models import Token
+# from regloginout.models import User
+
 warnings.filterwarnings(action="ignore")
 
 pytestmark = pytest.mark.django_db
 
 URL_BASE = 'http://127.0.0.1:8000/api/v1/'
 
-
-def base_request(client, url_view='', method='get', token=None, data=None,):
-    url = URL_BASE + url_view
-    if token:
-        headers = {'Authorization': f"Token {token}", }
-    else:
-        headers = None
-    if method == 'get':
-        response = client.get(url, headers=headers, data=data,)
-    if method == 'post':
-        response = client.post(url, headers=headers, data=data,)
-    if method == 'put':
-        response = client.put(url, headers=headers, data=data,)
-    if method == 'delete':
-        response = client.delete(url, headers=headers, data=data,)
-    try:
-        response.json()
-    except BaseException:
-        print('Ошибка json')
-    else:
-        return response.status_code, response.json()
-
 def test_example():
     assert True, "Just test example"
 
+
 # check /api/v1/user/register
-def test_user_register(client, register_user):
-    user = register_user
-    assert user['status_code'] == 200
-    assert user['status'] == True
-    # assert user['task_id']
+@pytest.mark.django_db
+def test_user_register(register_user):
+    api_client, user, conform_token, _ = register_user
+    assert user
+    assert conform_token
 
 
 # check /api/v1/user/register/confirm
-def test_register_confirm(client, register_user):
-    user = register_user
+@pytest.mark.django_db
+def test_register_confirm(register_user):
+    api_client, user, conform_token, _ = register_user
     # user conformation
     url_view = 'user/register/confirm/'
     url = URL_BASE + url_view
-    data = {'email': user['email'],
-            'token': user['conform_token'],
+    data = {'email': user.email,
+            'token': conform_token,
             }
-    response = client.post(url,
+    response = api_client.post(url,
                            data=data,
                            )
 
@@ -58,25 +41,37 @@ def test_register_confirm(client, register_user):
 
 
 # check /api/v1/user/login
-def test_login(client,register_user):
-    user = register_user
-    # user conformation for login
+@pytest.mark.django_db
+def test_login_logout(register_user):
+    api_client, user, conform_token, password = register_user
+
+    # user conformation
     url_view = 'user/register/confirm/'
     url = URL_BASE + url_view
-    data = {'email': user['email'],
-            'token': user['conform_token'],
+    data = {'email': user.email,
+            'token': conform_token,
             }
-    client.post(url, data=data,)
+    response = api_client.post(url,
+                               data=data,
+                               )
+
+    assert response.json()['Status'] == True
+    assert response.status_code == 200
+
     # user login
     url_view = 'user/login/'
     url = URL_BASE + url_view
-    data = {'email': user['email'],
-            'password': user['password'],
+    print(user.email)
+    print(user.password)
+    data = {'email': user.email,
+            'password': password,
             }
-    response = client.post(url,
+    response = api_client.post(url,
                            data=data,
                            )
+    print(response)
     assert response.status_code == 200
+
     if response.status_code == 200:
         if response.json()['Status'] == False:
             token = None
@@ -86,18 +81,45 @@ def test_login(client,register_user):
         token = None
     assert token != None
 
+    token_from_db, _ = Token.objects.get_or_create(user=user)
+    assert token == token_from_db.key
 
-def test_logout(client, user_create_login):
-    user, token = user_create_login
     # user logout
     url_view = 'user/logout/'
     url = URL_BASE + url_view
-    headers = {'Authorization': token}
-    response = client.get(url,
-                           headers=headers,
-                           )
+    headers = {'Authorization': f"Token {token}"}
+    response = api_client.get(url,
+                          headers=headers,
+                          )
     assert response.status_code == 200
     assert response.json()['Status'] == True
+
+
+# # check /api/v1/user/login
+# @pytest.mark.django_db
+# def test_login(user_create):
+#     api_client, user, password = user_create
+#     print(User.objects.all())
+#     # user login
+#     url_view = 'user/login/'
+#     url = URL_BASE + url_view
+#     data = {'email': user.email,
+#             'password': password,
+#             }
+#     print(data)
+#     response = api_client.post(url,
+#                            data=data,
+#                            )
+#     print(response.json())
+#     assert response.status_code == 200
+#     if response.status_code == 200:
+#         if response.json()['Status'] == False:
+#             token = None
+#         else:
+#             token = response.json()['Token']
+#     else:
+#         token = None
+#     assert token != None
 
 
 # start tests
