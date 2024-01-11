@@ -2,35 +2,34 @@ import pytest
 import warnings
 
 from rest_framework.authtoken.models import Token
-# from regloginout.models import User
+from .conftest import URL_BASE
 
 warnings.filterwarnings(action="ignore")
 
 pytestmark = pytest.mark.django_db
 
-URL_BASE = 'http://127.0.0.1:8000/api/v1/'
+# URL_BASE = 'http://127.0.0.1:8000/api/v1/'
 
 def test_example():
     assert True, "Just test example"
 
 
 # check /api/v1/user/register
-@pytest.mark.django_db
+
 def test_user_register(register_user):
-    api_client, user, conform_token, _ = register_user
+    api_client, user, confirm_token, _ = register_user
     assert user
-    assert conform_token
+    assert confirm_token
 
 
 # check /api/v1/user/register/confirm
-@pytest.mark.django_db
 def test_register_confirm(register_user):
-    api_client, user, conform_token, _ = register_user
-    # user conformation
+    api_client, user, confirm_token, _ = register_user
+    # user confirmation
     url_view = 'user/register/confirm/'
     url = URL_BASE + url_view
     data = {'email': user.email,
-            'token': conform_token,
+            'token': confirm_token,
             }
     response = api_client.post(url,
                            data=data,
@@ -41,15 +40,15 @@ def test_register_confirm(register_user):
 
 
 # check /api/v1/user/login
-@pytest.mark.django_db
+# check /api/v1/user/logout
 def test_login_logout(register_user):
-    api_client, user, conform_token, password = register_user
+    api_client, user, confirm_token, password = register_user
 
-    # user conformation
+    # user confirmation
     url_view = 'user/register/confirm/'
     url = URL_BASE + url_view
     data = {'email': user.email,
-            'token': conform_token,
+            'token': confirm_token,
             }
     response = api_client.post(url,
                                data=data,
@@ -58,7 +57,7 @@ def test_login_logout(register_user):
     assert response.json()['Status'] == True
     assert response.status_code == 200
 
-    # user login
+    # user/login
     url_view = 'user/login/'
     url = URL_BASE + url_view
     print(user.email)
@@ -84,7 +83,7 @@ def test_login_logout(register_user):
     token_from_db, _ = Token.objects.get_or_create(user=user)
     assert token == token_from_db.key
 
-    # user logout
+    # user/logout
     url_view = 'user/logout/'
     url = URL_BASE + url_view
     headers = {'Authorization': f"Token {token}"}
@@ -96,7 +95,6 @@ def test_login_logout(register_user):
 
 
 # # check /api/v1/user/login
-# @pytest.mark.django_db
 # def test_login(user_create):
 #     api_client, user, password = user_create
 #     print(User.objects.all())

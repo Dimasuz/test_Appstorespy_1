@@ -142,3 +142,6 @@ def api_test():
 
 if __name__ == "__main__":
     api_test()
+
+    # curl --location --request POST 'http://localhost:8000/api/upload-file/' \
+    # --form 'file=@"/path/to/yourfile.pdf"'

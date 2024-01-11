@@ -104,6 +104,75 @@ class ConfirmAccount(APIView):
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
+
+@extend_schema(
+    request=UserSerializer,
+    responses={201: UserSerializer},
+)
+class LoginAccount(APIView):
+    """
+    Класс для логина пользователей
+    """
+    # Login методом POST
+    def post(self, request, *args, **kwargs):
+
+        if {'email', 'password'}.issubset(request.data):
+            user = authenticate(request, username=request.data['email'], password=request.data['password'])
+
+            if user is not None:
+                if user.is_active:
+                    token, _ = Token.objects.get_or_create(user=user)
+                    login(request, user)
+                    return JsonResponse({'Status': True, 'Token': token.key})
+                else:
+                    JsonResponse({'Status': False, 'Errors': 'User is not active'}, status=403, )
+
+            return JsonResponse({'Status': False, 'Errors': 'Не удалось авторизовать', 'User': user}, status=403,)
+
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status=403,)
+
+
+@extend_schema(
+    request=UserSerializer,
+    responses={201: UserSerializer},
+)
+class LogoutAccount(APIView):
+    """
+    Класс для логаута пользователей
+    """
+    # Logout методом POST
+    def get(self, request):
+
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        logout(request)
+
+        return JsonResponse({'Status': True})
+
+
+
+
+#
+#
+# # для полчения статуса задач в celery добавим view class
+# class CeleryStatus(APIView):
+#     """
+#     Класс для получения статуса отлооженных задач в Celery
+#     """
+#
+#     # получить статус задачи в celery
+#     def get(self, request, *args, **kwargs):
+#         if not request.user.is_authenticated:
+#             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+#
+#         task_id = request.query_params.get('task_id')
+#         if task_id:
+#             task_result = AsyncResult(task_id)
+#             result = task_result.status
+#             return JsonResponse({'status': result}, status=200)
+
+
 #
 # @extend_schema(
 #     request=UserSerializer,
@@ -150,64 +219,3 @@ class ConfirmAccount(APIView):
 #             return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
 #
 #
-@extend_schema(
-    request=UserSerializer,
-    responses={201: UserSerializer},
-)
-class LoginAccount(APIView):
-    """
-    Класс для авторизации и логина пользователей
-    """
-    # Авторизация методом POST
-    def post(self, request, *args, **kwargs):
-
-        if {'email', 'password'}.issubset(request.data):
-            user = authenticate(request, username=request.data['email'], password=request.data['password'])
-
-            if user is not None:
-                if user.is_active:
-                    token, _ = Token.objects.get_or_create(user=user)
-                    login(request, user)
-                    return JsonResponse({'Status': True, 'Token': token.key})
-                else:
-                    JsonResponse({'Status': False, 'Errors': 'User is not active'}, status=403, )
-
-            return JsonResponse({'Status': False, 'Errors': 'Не удалось авторизовать', 'User': user}, status=403,)
-
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status=403,)
-
-
-class LogoutAccount(APIView):
-    """
-    Класс для логаута пользователей
-    """
-    def get(self, request):
-
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-
-        logout(request)
-
-        return JsonResponse({'Status': True})
-
-
-
-
-#
-#
-# # для полчения статуса задач в celery добавим view class
-# class CeleryStatus(APIView):
-#     """
-#     Класс для получения статуса отлооженных задач в Celery
-#     """
-#
-#     # получить статус задачи в celery
-#     def get(self, request, *args, **kwargs):
-#         if not request.user.is_authenticated:
-#             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-#
-#         task_id = request.query_params.get('task_id')
-#         if task_id:
-#             task_result = AsyncResult(task_id)
-#             result = task_result.status
-#             return JsonResponse({'status': result}, status=200)
