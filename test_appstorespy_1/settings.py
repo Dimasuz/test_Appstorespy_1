@@ -12,19 +12,31 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv, find_dotenv
+
+# load_dotenv()
+# Load environment definition file
+ENV_FILE = find_dotenv()
+if ENV_FILE:
+    load_dotenv(ENV_FILE)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
+# BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-u!ir*qid6as6l63718!rkbz1_sz8lrj-&4mht7mlkf1*y&m*p@'
+# SECRET_KEY = 'django-insecure-u!ir*qid6as6l63718!rkbz1_sz8lrj-&4mht7mlkf1*y&m*p@'
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-u!ir*qid6as6l63718!rkbz1_sz8lrj-&4mht7mlkf1*y&m*p@"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
+DEBUG = os.environ.get("DEBUG", 1)
 
 ALLOWED_HOSTS = ['*']
 
@@ -38,12 +50,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # for Auth0 settings
+    'app_auth0',
+    'social_django',
+
     # 'backend.apps.BackendConfig',
     'regloginout',
     'uploader',
     'rest_framework',
     'rest_framework.authtoken',
     'drf_spectacular',
+    'drf_spectacular_sidecar',
     'django_rest_passwordreset',
     # The following apps are required for allauth:
     'django.contrib.sites',
@@ -64,6 +81,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # for auth0 api
+    'django.contrib.auth.middleware.RemoteUserMiddleware',
     # for django-silk
     'silk.middleware.SilkyMiddleware',
     'allauth.account.middleware.AccountMiddleware',
@@ -74,7 +93,8 @@ ROOT_URLCONF = 'test_appstorespy_1.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        # 'DIRS': [],
+        'DIRS': [TEMPLATE_DIR],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -93,12 +113,32 @@ WSGI_APPLICATION = 'test_appstorespy_1.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+DB_SQLITE = "sqlite"
+DB_POSTGRESQL = "postgresql"
+
+DATABASES_ALL = {
+    DB_SQLITE: {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.path.join(BASE_DIR, 'db.sqlite3'),
+    },
+    DB_POSTGRESQL: {
+        "ENGINE": "django.db.backends.postgresql",
+        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+        "NAME": os.environ.get("POSTGRES_NAME", "postgres"),
+        "USER": os.environ.get("POSTGRES_USER", "postgres"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "password"),
+        "PORT": int(os.environ.get("POSTGRES_PORT", "5432")),
+    },
 }
+
+DATABASES = {"default": DATABASES_ALL[os.environ.get("DJANGO_DB", DB_SQLITE)]}
 
 
 # Password validation
@@ -136,6 +176,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
@@ -148,8 +189,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'regloginout.User'
 
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
+        # for auth0 api
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
@@ -159,6 +207,9 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Testing task for junior python dev',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_DIST': 'SIDECAR',  # shorthand to use the sidecar instead
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
 }
 
 # for allauth
@@ -167,8 +218,43 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     # `allauth` specific authentication methods, such as login by e-mail
     'allauth.account.auth_backends.AuthenticationBackend',
+    # for auth0 web
+    'social_core.backends.auth0.Auth0OAuth2',
+    # for auth0 api
+    'django.contrib.auth.backends.RemoteUserBackend',
+
+
 ]
 
-EMAIL_HOST_USER = '6021185@mail.ru'
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "email@email.com")
 
 SITE_ID = 1
+
+
+# Auth0 settings
+# SOCIAL_AUTH_TRAILING_SLASH = False  # Remove trailing slash from routes
+AUTH0_DOMAIN =  os.environ.get("AUTH0-DOMAIN")
+AUTH0_CLIENT_ID = os.environ.get("AUTH0-CLIENT-ID")
+AUTH0_CLIENT_SECRET = os.environ.get("AUTH0-CLIENT-SECRET")
+# SOCIAL_AUTH_AUTH0_SCOPE = [
+#     'openid',
+#     'profile',
+#     'email'
+# ]
+
+# Auth0 settings
+LOGIN_URL = '/login/auth0'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+# for Auth0 api
+JWT_AUTH = {
+    'JWT_PAYLOAD_GET_USERNAME_HANDLER':
+        'app_auth0.utils.jwt_get_username_from_payload_handler',
+    'JWT_DECODE_HANDLER':
+        'app_auth0.utils.jwt_decode_token',
+    'JWT_ALGORITHM': 'RS256',
+    'JWT_AUDIENCE': os.environ.get("JWT_AUDIENCE"), # yourApiIdentifier
+    'JWT_ISSUER': os.environ.get("JWT_ISSUER"), # yourDomain
+    'JWT_AUTH_HEADER_PREFIX': 'Bearer',
+}

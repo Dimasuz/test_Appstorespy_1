@@ -73,3 +73,7 @@ def upload_file(tmp_path, request):
 #     # token, _ = Token.objects.get_or_create(user=user)
 #     return api_client, user, password
 
+
+# for auth0
+# https://github.com/mozilla-iam/auth0-tests/tree/master
+

@@ -7,10 +7,13 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/', include('regloginout.urls', namespace='regloginout')),
-    path('api/v1/', include('uploader.urls', namespace='uploader')),
+    path('', include('regloginout.urls', namespace='regloginout')),
+    path('', include('uploader.urls', namespace='uploader')),
     # for allauth
     path('accounts/', include('allauth.urls')),
+    # for auth0
+    path('', include('app_auth0.urls', namespace='app_auth0')),
+    path('', include('social_django.urls')),
     # for django-silk
     path('silk/', include('silk.urls', namespace='silk')),
     # доступ к описанию проекта из API
