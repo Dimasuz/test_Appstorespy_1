@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv, find_dotenv
+import redis
 
 # load_dotenv()
 # Load environment definition file
@@ -70,7 +71,7 @@ INSTALLED_APPS = [
     # ... include the providers to enable:
     'allauth.socialaccount.providers.mailru',
     # for django-silk
-    'silk'
+    'silk',
 ]
 
 MIDDLEWARE = [
@@ -178,20 +179,22 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
+MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD ='django.db.models.AutoField'
 
 AUTH_USER_MODEL = 'regloginout.User'
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
+    # 'DEFAULT_PERMISSION_CLASSES': (
+    #     'rest_framework.permissions.IsAuthenticated',
+    #     'rest_framework.permissions.IsAdminUser',
+    # ),
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
         # for auth0 api
@@ -200,7 +203,37 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    # 'PAGE_SIZE': 40,
+    #
+    # 'DEFAULT_RENDERER_CLASSES': (
+    #     'rest_framework.renderers.JSONRenderer',
+    #     'rest_framework.renderers.BrowsableAPIRenderer',
+    # ),
+    #
+    # 'DEFAULT_THROTTLE_CLASSES': [
+    #     'rest_framework.throttling.AnonRateThrottle',
+    #     'rest_framework.throttling.UserRateThrottle'
+    # ],
+    # 'DEFAULT_THROTTLE_RATES': {
+    #     'anon': '100/day',
+    #     'user': '1000/day'
+    # },
+    # 'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
+
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
+
+# Celery Configuration Options
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+CELERY_TIMEZONE = "UTC"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Project Appstorespy API',
@@ -222,14 +255,26 @@ AUTHENTICATION_BACKENDS = [
     'social_core.backends.auth0.Auth0OAuth2',
     # for auth0 api
     'django.contrib.auth.backends.RemoteUserBackend',
-
-
 ]
 
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "email@email.com")
+# Specifies the login method to use for allauth
+ACCOUNT_AUTHENTICATION_METHOD='email'
+ACCOUNT_EMAIL_REQUIRED=True
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USERNAME_REQUIRED = False
+#>
 
-SITE_ID = 1
-
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_USE_TLS = True
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.mail.ru")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "test@mail.ru")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "password")
+EMAIL_PORT = '465'
+EMAIL_USE_SSL = True
+SERVER_EMAIL = EMAIL_HOST_USER
+#< добавлено для устранения ошибки SMTP:550 при регистрации через allauth
+# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+#>
 
 # Auth0 settings
 # SOCIAL_AUTH_TRAILING_SLASH = False  # Remove trailing slash from routes
@@ -244,8 +289,8 @@ AUTH0_CLIENT_SECRET = os.environ.get("AUTH0-CLIENT-SECRET")
 
 # Auth0 settings
 LOGIN_URL = '/login/auth0'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/login/auth0'
+LOGOUT_REDIRECT_URL = '/login/auth0'
 
 # for Auth0 api
 JWT_AUTH = {
@@ -258,3 +303,16 @@ JWT_AUTH = {
     'JWT_ISSUER': os.environ.get("JWT_ISSUER"), # yourDomain
     'JWT_AUTH_HEADER_PREFIX': 'Bearer',
 }
+
+SITE_ID = 1
+#< уточнен id сайта exemple.com, без этого при обращении к /admin/ выдавал ошибку:
+# "django.contrib.sites.models.Site.DoesNotExist: Site matching query does not exist"
+# Решение - в консоле:
+# python manage.py shell
+# from django.contrib.sites.models import Site
+# Site.objects.create(name='example.com',domain='example.com').save()
+# s=Site.objects.filter(name='example.com')[0]
+# s.id
+# 4
+# SITE_ID = 4
+#>

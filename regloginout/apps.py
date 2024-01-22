@@ -1,6 +1,11 @@
 from django.apps import AppConfig
 
 
-class RegloginoutConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
+class BackendConfig(AppConfig):
     name = 'regloginout'
+
+    def ready(self):
+        """
+        импортируем сигналы
+        """
+        pass

@@ -1,0 +1,5 @@
+FROM dimasuz/ubuntu2004_python39:v1
+
+RUN apt-get update \
+    && apt-get -y install redis-server \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*

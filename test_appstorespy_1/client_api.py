@@ -1,8 +1,10 @@
 import time
+import uuid
 import requests
 from pprint import pprint
 
 url_base = 'http://0.0.0.0:8000/api/v1/'
+# url_base = 'http://127.0.0.1:8000/api/v1/'
 # url_base = 'http://0.0.0.0:8000/api/v1/auth0/'
 
 def base_request(url_view='', method='get', headers=None, data=None, params=None):
@@ -38,72 +40,74 @@ def get_headers(token=None, content_type=None):
     return headers
 
 # registration-----------
-def user_register(num=None):
+def user_register(email=None, password=None):
     url_view = 'user/register/'
-    if not num:
-        num = int(input('Введите номер пользователя: '))
-
-    data ={'first_name': f'first_name_{num}',
-          'last_name': f'last_name_{num}',
-          'email': f'email_{num}@mail.ru',
-          'password': f'Password_{num}',
+    if not email:
+        email = int(input('Введите email: '))
+    if not password:
+        password = int(input('Введите пароль: '))
+    data ={'first_name': f'first_name_{email}',
+          'last_name': f'last_name_{email}',
+          'email': email,
+          'password': f'Password_{email}',
           }
     response, json_status = base_request(url_view=url_view, method='post', data=data)
     if json_status:
-        token_confirm = response.json()['token']['token']
+        # token_confirm = response.json()['token']['token']
+        task_id = response.json()['task_id']
     else:
-        token_confirm = None
-    print(f'Token confirm: {token_confirm}')
-    return token_confirm, num
+        task_id = None
+    print(f'Token confirm: {task_id}')
+    return task_id
 
 
 # confirm email----------------------
-def confirm(token=None, num=None):
+def confirm():
     url_view = 'user/register/confirm/'
-    if not num:
-        num = input('Введите номер пользователя: ')
-    if not token:
-        token = input('Введите token: ')
-
-
-    data= {'email': f'email_{num}@mail.ru',
+    email = input('Введите email пользователя: ')
+    token = input('Введите token: ')
+    data= {'email': email,
            'token': token,
            }
     response, json_status = base_request(url_view=url_view, method='post', data=data)
 
-    if response.status_code == 200 and json_status:
-        if response.json()['Status'] == False:
-            print('Нет такого пользователя')
-        else:
-            print('User confirm succesful.')
-
 
 # login user -----------------------
-def login(num=None):
+def login(email=None, password=None):
     url_view = 'user/login/'
-    if not num:
-        num = int(input('Введите номер пользователя (или 0) = '))
-    if num == 0:
-        email = input('Введите email пользователя = ')
-        num = input('Введите номер пароля = ')
-    else:
-        email = f'email_{num}@mail.ru'
-    password = f'Password_{num}'
+    if not email:
+        email = int(input('Введите email пользователя = '))
+    if not password:
+        password = f'Password_{email}'
     data= {'email': email,
            'password': password,
            }
     response, json_status = base_request(url_view=url_view, method='post', data=data)
     if response.status_code == 200 and json_status:
         if response.json()['Status'] == False:
-            print('Нет такого пользователя')
             token_login = None
         else:
             token_login = response.json()['Token']
-            print(f'Token login: {token_login}')
     else:
         token_login = None
     return token_login
 
+# user/details/ -----------------------------
+def details_get(token=None):
+    url_view = 'user/details/'
+    if not token:
+        token = input('Введите token пользователя = ')
+    headers = get_headers(token=token)
+    response, json_status = base_request(url_view=url_view, method='get', headers=headers,)
+    return response
+
+def details_post(token=None, **kwargs):
+    url_view = 'user/details/'
+    if not token:
+        token = input('Введите token пользователя = ')
+    headers = get_headers(token=token)
+    response, json_status = base_request(url_view=url_view, method='post', data=kwargs, headers=headers)
+    return response
 
 # logout user-----------------------
 def logout(token=None):
@@ -112,31 +116,87 @@ def logout(token=None):
         token = input('Введите token пользователя = ')
     headers = get_headers(token=token)
     response, json_status = base_request(url_view=url_view, method='get', headers=headers,)
-    if response.status_code == 200 and json_status:
-        if response.json()['Status'] == False:
-            print('Нет такого пользователя')
-        else:
-            print('Logout successful.')
 
+
+# celery tesk status-----------------------
+def celery_status(task_id=None):
+    url_view = 'user/celery_status'
+    if not task_id:
+        task_id = input('Введите task_id = ')
+    if task_id:
+            celery_status = "PENDING"
+            while celery_status == "PENDING":
+                # status = requests.get(f"{url_base}{url_view}?task_id={task_id}").json()["status"]
+                response, json_status = base_request(url_view=url_view, method='get', params={'task_id': task_id})
+                celery_status = response.json()['celery_status']
+                print(f'{celery_status=}')
+                # time.sleep(1)
+                if celery_status == "PENDING":
+                    if input('Stop? y/n') == 'y':
+                        return
+                    else:
+                        celery_status = "PENDING"
 
 def api_test():
     a = None
+    a = input('Регистрация - 1, Подтверждение почты - 2, Логин - 3, Логаут - 4, \n Детали пользователя (получить) - 5, Детали пользователя (изменить) - 6, или запрос таски - 7 : ')
 
-    a = input('Регистрация - 1, Подтверждение почты - 2, Логин - 3, Логаут - 4, или все сразу - 0 : ')
-    if a == '0':
-        num = time.time()
-        token, _ = user_register(num)
-        confirm(token, num)
-        token = login(num)
-        logout(token)
-    elif a == '1':
-        user_register()
+    if a == '1':
+        email = input('Введите {адрес} @mail.ru: ')
+        email = email + '@mail.ru'
+        # num = time.time()
+        # num = str(uuid.uuid4())
+        password = f'Password_{email}'
+        task_id = user_register(email=email, password=password)
+        celery = input('Запросить очередь celery? ')
+        if celery:
+            celery_status(task_id)
+        else:
+            return
     elif a == '2':
         confirm()
     elif a == '3':
-        login()
-    elif a == 4 :
+        email = input('Введите {адрес} @mail.ru: ')
+        email = email + '@mail.ru'
+        if input('Стандартный пароль? Y '):
+            login(email=email)
+        else:
+            password = input('Введите пароль: ')
+            login(email=email, password=password)
+    elif a == '4':
         logout()
+    elif a == '5':
+        email = input('Введите {адрес} @mail.ru: ')
+        email = email + '@mail.ru'
+        token = login(email=email)
+        details_get(token)
+    elif a == '6':
+        email = input('Введите {адрес} @mail.ru: ')
+        email = email + '@mail.ru'
+        print('Входим в систему.')
+        token = login(email=email)
+        print('Меняем данные пользователя добавив "_new".')
+        password_new = f'Password_{email}_new'
+        # password_new = 'new'
+        data = {'first_name': f'first_name_{email}_new',
+                'last_name': f'last_name_6021185@mail.ru{email}_new',
+                'password': password_new}
+        details_post(token, **data)
+        details_get(token)
+        print('Выходим из системы')
+        logout()
+        if input('Меняем данные пользователя обратно? Y '):
+            print('Входим в систему.')
+            token = login(email=email, password=password_new)
+            data = {'first_name': f'first_name_{email}',
+                    'last_name': f'last_name_{email}',
+                    'password': f'Password_{email}'}
+            details_post(token, **data)
+            details_get(token)
+            print('Выходим из системы')
+            logout(token)
+    elif a == '7':
+        celery_status()
     else:
         pass
     return None

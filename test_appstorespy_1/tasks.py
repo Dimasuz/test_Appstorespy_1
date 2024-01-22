@@ -25,6 +25,7 @@ def send_email(email, title, massage):
 @app.task
 def task_print(pr, t):
     import time
+    print(pr)
     time.sleep(t)
     print(pr)
     return pr

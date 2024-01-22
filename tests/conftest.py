@@ -31,10 +31,41 @@ def register_user(api_client):
             'email': email,
             'password': password,
             }
-    api_client.post(url, data=data,)
+    response = api_client.post(url, data=data,)
     user = User.objects.all().filter(email=email).get()
     conform_token = ConfirmEmailToken.objects.filter(user_id=user.id).values_list('key', flat=True).get()
-    return api_client, user, conform_token, password
+    return api_client, user, conform_token, password, response
+
+
+@pytest.fixture
+def register_confirm(register_user):
+    api_client, user, confirm_token, password, _ = register_user
+    # user confirmation
+    url_view = 'user/register/confirm/'
+    url = URL_BASE + url_view
+    data = {'email': user.email,
+            'token': confirm_token,
+            }
+    response = api_client.post(url,
+                           data=data,
+                           )
+    return api_client, user, password, response
+
+
+@pytest.fixture
+def login(register_confirm):
+    api_client, user, password, _ = register_confirm
+    url_view = 'user/login/'
+    url = URL_BASE + url_view
+    data = {'email': user.email,
+            'password': password,
+            }
+    response = api_client.post(url,
+                               data=data,
+                               )
+    token = response.json()['Token']
+    return api_client, user, token
+
 
 
 @pytest.fixture()

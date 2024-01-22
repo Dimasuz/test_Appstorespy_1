@@ -14,6 +14,7 @@ from rest_framework.authtoken.models import Token
 # from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import DjangoModelPermissionsOrAnonReadOnly, AllowAny
 # from rest_framework import viewsets
 # from ujson import loads as load_json
 # from yaml import load as load_yaml, Loader
@@ -58,7 +59,7 @@ class RegisterAccount(APIView):
                     user = user_serializer.save()
                     user.set_password(request.data['password'])
                     user.save()
-                    # # для применения celery возвращаем task задачи для возможности контроля ее выполнения
+                    # для применения celery возвращаем task задачи для возможности контроля ее выполнения
                     send_mail = new_user_registered.send(sender=self.__class__, user_id=user.id)
                     return JsonResponse({'Status': True, 'task_id': send_mail[0][1]})
                     # token = new_user_registered.send(sender=self.__class__, user_id=user.id)
@@ -141,7 +142,7 @@ class LogoutAccount(APIView):
     Класс для логаута пользователей
     """
     # Logout методом POST
-    def get(self, request):
+    def post(self, request):
 
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
@@ -151,22 +152,19 @@ class LogoutAccount(APIView):
         return JsonResponse({'Status': True})
 
 
-# для полчения статуса задач в celery добавим view class
-class CeleryStatus(APIView):
+class DeleteAccount(APIView):
     """
-    Класс для получения статуса отлооженных задач в Celery
+    Класс для удаления пользователей
     """
+    # Delete методом Delete
+    def delete(self, request):
 
-    # получить статус задачи в celery
-    def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
-        task_id = request.query_params.get('task_id')
-        if task_id:
-            task_result = AsyncResult(task_id)
-            result = task_result.status
-            return JsonResponse({'status': result}, status=200)
+        request.user.delete()
+
+        return JsonResponse({'Status': True})
 
 
 @extend_schema(
@@ -192,7 +190,6 @@ class UserDetails(APIView):
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
         # проверяем обязательные аргументы
         if 'password' in request.data:
-
             # проверяем пароль на сложность
             try:
                 validate_password(request.data['password'])
@@ -212,3 +209,16 @@ class UserDetails(APIView):
             return JsonResponse({'Status': True})
         else:
             return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
+
+# для полчения статуса задач в celery добавим view class
+class CeleryStatus(APIView):
+    """
+    Класс для получения статуса отлооженных задач в Celery
+    """
+    permission_classes = [AllowAny]
+    def get(self, request, *args, **kwargs):
+        task_id = request.query_params.get('task_id')
+        if task_id:
+            task_result = AsyncResult(task_id)
+            result = task_result.status
+            return JsonResponse({'celery_status': result}, status=200)
