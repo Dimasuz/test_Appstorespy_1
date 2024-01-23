@@ -51,18 +51,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # for Auth0 settings
-    'app_auth0',
-    'social_django',
-
-    # 'backend.apps.BackendConfig',
-    'regloginout',
-    'uploader',
     'rest_framework',
     'rest_framework.authtoken',
+    'django_rest_passwordreset',
+    # apps
+    'regloginout',
+    'uploader',
+
     'drf_spectacular',
     'drf_spectacular_sidecar',
-    'django_rest_passwordreset',
+
     # The following apps are required for allauth:
     'django.contrib.sites',
     'allauth',
@@ -72,6 +70,9 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.mailru',
     # for django-silk
     'silk',
+    # for Auth0 settings
+    'app_auth0',
+    'social_django',
 ]
 
 MIDDLEWARE = [
@@ -113,13 +114,6 @@ WSGI_APPLICATION = 'test_appstorespy_1.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 
 DB_SQLITE = "sqlite"
 DB_POSTGRESQL = "postgresql"
@@ -172,7 +166,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
@@ -185,8 +178,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
-# DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-DEFAULT_AUTO_FIELD ='django.db.models.AutoField'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# DEFAULT_AUTO_FIELD ='django.db.models.AutoField'
 
 AUTH_USER_MODEL = 'regloginout.User'
 
@@ -272,9 +265,8 @@ EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "password")
 EMAIL_PORT = '465'
 EMAIL_USE_SSL = True
 SERVER_EMAIL = EMAIL_HOST_USER
-#< добавлено для устранения ошибки SMTP:550 при регистрации через allauth
+# добавить для устранения ошибки SMTP:550 при регистрации через allauth
 # DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-#>
 
 # Auth0 settings
 # SOCIAL_AUTH_TRAILING_SLASH = False  # Remove trailing slash from routes
@@ -305,7 +297,7 @@ JWT_AUTH = {
 }
 
 SITE_ID = 1
-#< уточнен id сайта exemple.com, без этого при обращении к /admin/ выдавал ошибку:
+#< уточнть id сайта exemple.com, без этого при обращении к /admin/ может выдавать ошибку:
 # "django.contrib.sites.models.Site.DoesNotExist: Site matching query does not exist"
 # Решение - в консоле:
 # python manage.py shell
@@ -315,4 +307,3 @@ SITE_ID = 1
 # s.id
 # 4
 # SITE_ID = 4
-#>

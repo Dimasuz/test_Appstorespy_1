@@ -28,19 +28,17 @@ class FileUploadAPIView(APIView):
 
         serializer = self.serializer_class(data=request.data)
 
-        if serializer.is_valid():
-            # you can access the file like this from serializer
-            # uploaded_file = serializer.validated_data["file"]
-            serializer.save()
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
+        if 'file' in request.FILES or serializer.is_valid():
+            handle_uploaded_file(request.FILES['file'])
+            return Response(status=status.HTTP_201_CREATED)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+def handle_uploaded_file(f):
+    with open(f.name, 'wb+') as destination:
+        for chunk in f.chunks():
+            destination.write(chunk)
+
 
 
 from django.views.generic.edit import CreateView

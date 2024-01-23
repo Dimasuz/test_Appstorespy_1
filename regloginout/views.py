@@ -1,31 +1,16 @@
-# from django.shortcuts import render
-
 from celery.result import AsyncResult
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.password_validation import validate_password
-# from django.core.exceptions import ValidationError
-# from django.core.validators import URLValidator
-# from django.db import IntegrityError
-# from django.db.models import Q, Sum, F
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
-# from requests import get
 from rest_framework.authtoken.models import Token
-# from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import DjangoModelPermissionsOrAnonReadOnly, AllowAny
-# from rest_framework import viewsets
-# from ujson import loads as load_json
-# from yaml import load as load_yaml, Loader
-
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
-from drf_spectacular.types import OpenApiTypes
-
+from rest_framework.permissions import AllowAny
+from drf_spectacular.utils import extend_schema
 from regloginout.models import ConfirmEmailToken
 from regloginout.serializers import UserSerializer
 from regloginout.signals import new_user_registered
-# from netology_pd_diplom.tasks import task_print
+
 
 # decorators @extend_schema is for OPEN API
 @extend_schema(
@@ -36,6 +21,7 @@ class RegisterAccount(APIView):
     """
     User registration
     """
+    # Регистрация методом POST
     def post(self, request, *args, **kwargs):
 
         # проверяем обязательные аргументы
@@ -61,18 +47,7 @@ class RegisterAccount(APIView):
                     user.save()
                     # для применения celery возвращаем task задачи для возможности контроля ее выполнения
                     send_mail = new_user_registered.send(sender=self.__class__, user_id=user.id)
-                    return JsonResponse({'Status': True, 'task_id': send_mail[0][1]})
-                    # token = new_user_registered.send(sender=self.__class__, user_id=user.id)
-
-                    # return JsonResponse({'Status': True})
-
-                #     try:
-                #         JsonResponse(token)
-                #     except Exception as e:
-                #         token = token[0][1]
-                #
-                #     return JsonResponse({'Status': True, 'token': token})
-
+                    return JsonResponse({'Status': True, 'task_id': send_mail[0][1]['task_id'], 'token': send_mail[0][1]['token'],})
                 else:
                     return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
 
@@ -87,7 +62,7 @@ class ConfirmAccount(APIView):
     """
     Класс для подтверждения почтового адреса
     """
-    # Регистрация методом POST
+    # Подтверждение почтового адреса методом POST
     def post(self, request, *args, **kwargs):
 
         # проверяем обязательные аргументы
@@ -147,6 +122,7 @@ class LogoutAccount(APIView):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
+        request.user.auth_token.delete()
         logout(request)
 
         return JsonResponse({'Status': True})
@@ -156,7 +132,7 @@ class DeleteAccount(APIView):
     """
     Класс для удаления пользователей
     """
-    # Delete методом Delete
+    # Delete методом DELETE
     def delete(self, request):
 
         if not request.user.is_authenticated:
@@ -176,7 +152,7 @@ class UserDetails(APIView):
     Класс для работы с данными пользователя
     """
 
-    # получить данные
+    # Получение данных методом GET
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
@@ -210,11 +186,12 @@ class UserDetails(APIView):
         else:
             return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
 
-# для полчения статуса задач в celery добавим view class
+
 class CeleryStatus(APIView):
     """
     Класс для получения статуса отлооженных задач в Celery
     """
+    # Получение сатуса задач Celery методом GET
     permission_classes = [AllowAny]
     def get(self, request, *args, **kwargs):
         task_id = request.query_params.get('task_id')

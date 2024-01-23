@@ -1,9 +1,7 @@
 import os
 import uuid
 import pytest
-
 from regloginout.models import User, ConfirmEmailToken
-
 from rest_framework.authtoken.models import Token
 from model_bakery import baker
 # from django.contrib.auth import authenticate, login, logout
@@ -67,7 +65,6 @@ def login(register_confirm):
     return api_client, user, token
 
 
-
 @pytest.fixture()
 def create_token():
     user = baker.make(User, is_active=True,)
@@ -76,8 +73,8 @@ def create_token():
 
 
 @pytest.fixture
-def upload_file(tmp_path, request):
-    file_name = str(uuid.uuid4())
+def tmp_file(tmp_path, request):
+    file_name = 'test_file_' + str(uuid.uuid4())
     file_ext = request.param
     file_name = os.path.join(tmp_path,f'{file_name}.{file_ext}')
     with open(file_name, 'w+') as file:
@@ -85,26 +82,5 @@ def upload_file(tmp_path, request):
         file.write(f"test {file_name}")
     return file_name
 
-
-# @pytest.fixture
-# def create_user_active():
-#    def make_user(**kwargs):
-#        test_name = str(uuid.uuid4())
-#        kwargs['password'] = '123password'
-#        kwargs['email'] = '123@example.com'
-#        kwargs['is_active'] = True
-#        return User.objects.create_user(**kwargs)
-#    return make_user
-
-# # фикстура логина пользователя
-# @pytest.fixture()
-# def user_create(api_client):
-#     password = str(uuid.uuid4())
-#     user = baker.make(User, is_active=True, password=password, email=password+'@test.com')
-#     # token, _ = Token.objects.get_or_create(user=user)
-#     return api_client, user, password
-
-
 # for auth0
 # https://github.com/mozilla-iam/auth0-tests/tree/master
-
