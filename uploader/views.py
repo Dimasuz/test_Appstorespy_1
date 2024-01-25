@@ -1,3 +1,5 @@
+import asyncio
+import aiofiles
 from django.http import JsonResponse
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -7,6 +9,16 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExampl
 
 from .serializers import FileUploadSerializer
 
+from django.views.generic.edit import CreateView
+from django.urls import reverse_lazy
+from .models import UploadFile
+
+
+
+async def handle_uploaded_file(f):
+    async with aiofiles.open(f.name, 'wb+') as destination:
+        for chunk in f.chunks(1):
+            await destination.write(chunk)
 
 @extend_schema(
     request=FileUploadSerializer,
@@ -29,21 +41,10 @@ class FileUploadAPIView(APIView):
         serializer = self.serializer_class(data=request.data)
 
         if 'file' in request.FILES or serializer.is_valid():
-            handle_uploaded_file(request.FILES['file'])
+            asyncio.run(handle_uploaded_file(request.FILES['file']))
             return Response(status=status.HTTP_201_CREATED)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-
-def handle_uploaded_file(f):
-    with open(f.name, 'wb+') as destination:
-        for chunk in f.chunks():
-            destination.write(chunk)
-
-
-
-from django.views.generic.edit import CreateView
-from django.urls import reverse_lazy
-from .models import UploadFile
 
 
 @extend_schema(

@@ -1,1 +1,0 @@
-test /tmp/pytest-of-dimasuz/pytest-11/test_upload_txt_0/4c59a2a3-9e68-406a-87a0-ad5b92d0068b.txt

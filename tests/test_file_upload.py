@@ -36,4 +36,4 @@ def test_upload_not_authorization(login, tmp_file):
 
     assert response.status_code == 401
 
-
+# pytest --ignore=tests/test_regloginout.py
