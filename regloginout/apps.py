@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 
 class BackendConfig(AppConfig):
-    name = 'regloginout'
+    name = "regloginout"
 
     def ready(self):
         """

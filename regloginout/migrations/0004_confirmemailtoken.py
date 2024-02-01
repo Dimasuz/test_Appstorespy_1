@@ -8,21 +8,47 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('regloginout', '0003_alter_user_is_active'),
+        ("regloginout", "0003_alter_user_is_active"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ConfirmEmailToken',
+            name="ConfirmEmailToken",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='When was this token generated')),
-                ('key', models.CharField(db_index=True, max_length=64, unique=True, verbose_name='Key')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='confirm_email_tokens', to=settings.AUTH_USER_MODEL, verbose_name='The User which is associated to this password reset token')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="When was this token generated"
+                    ),
+                ),
+                (
+                    "key",
+                    models.CharField(
+                        db_index=True, max_length=64, unique=True, verbose_name="Key"
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="confirm_email_tokens",
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="The User which is associated to this password reset token",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Токен подтверждения Email',
-                'verbose_name_plural': 'Токены подтверждения Email',
+                "verbose_name": "Токен подтверждения Email",
+                "verbose_name_plural": "Токены подтверждения Email",
             },
         ),
     ]

@@ -1,11 +1,13 @@
 import uuid
-import pytest
 import warnings
 
+import pytest
 from django_rest_passwordreset.models import ResetPasswordToken
 from rest_framework.authtoken.models import Token
-from .conftest import URL_BASE
+
 from regloginout.models import User
+
+from .conftest import URL_BASE
 
 warnings.filterwarnings(action="ignore")
 
@@ -22,15 +24,15 @@ def test_user_register(register_user):
 
     assert user
     assert confirm_token
-    assert response.json()['Status'] == True
-    assert response.json()['task_id']
+    assert response.json()["Status"] == True
+    assert response.json()["task_id"]
 
 
 # check /api/v1/user/register/confirm
 def test_register_confirm(register_confirm):
     api_client, _, _, response = register_confirm
 
-    assert response.json()['Status'] == True
+    assert response.json()["Status"] == True
     assert response.status_code == 200
 
 
@@ -39,167 +41,204 @@ def test_user_login(register_confirm):
     api_client, user, password, _ = register_confirm
 
     # user/login
-    url_view = 'user/login/'
+    url_view = "user/login/"
     url = URL_BASE + url_view
-    data = {'email': user.email,
-            'password': password,
-            }
-    response = api_client.post(url,
-                           data=data,
-                           )
+    data = {
+        "email": user.email,
+        "password": password,
+    }
+    response = api_client.post(
+        url,
+        data=data,
+    )
     assert response.status_code == 200
-    assert response.json()['Token'] == Token.objects.get(user=user).key
+    assert response.json()["Token"] == Token.objects.get(user=user).key
+
 
 # user/logout
 def test_user_logout(login):
     api_client, user, token = login
-    url_view = 'user/logout/'
+    url_view = "user/logout/"
     url = URL_BASE + url_view
-    headers = {'Authorization': f"Token {token}"}
-    response = api_client.post(url,
-                          headers=headers,
-                          )
+    headers = {"Authorization": f"Token {token}"}
+    response = api_client.post(
+        url,
+        headers=headers,
+    )
     try:
         token = Token.objects.get(user=user)
     except Token.DoesNotExist as e:
         token = str(e)
 
     assert response.status_code == 200
-    assert response.json()['Status'] == True
-    assert token == 'Token matching query does not exist.'
+    assert response.json()["Status"] == True
+    assert token == "Token matching query does not exist."
 
 
 # user/delete
 def test_user_delete(login):
     api_client, user, token = login
-    url_view = 'user/delete/'
+    url_view = "user/delete/"
     url = URL_BASE + url_view
-    headers = {'Authorization': f"Token {token}"}
-    response = api_client.delete(url,
-                          headers=headers,
-                          )
+    headers = {"Authorization": f"Token {token}"}
+    response = api_client.delete(
+        url,
+        headers=headers,
+    )
     try:
         user = User.objects.filter(email=user.email).get()
     except User.DoesNotExist as e:
         user = str(e)
 
     assert response.status_code == 200
-    assert response.json()['Status'] == True
-    assert user == 'User matching query does not exist.'
+    assert response.json()["Status"] == True
+    assert user == "User matching query does not exist."
 
 
-# check /api/v1/user/details/
+# check details/ [GET]
 def test_user_details_get(login):
     api_client, user, token = login
 
-    #test details_get
-    url_view = 'user/details/'
+    url_view = "user/details/"
     url = URL_BASE + url_view
-    headers = {'Authorization': f"Token {token}", }
-    response = api_client.get(url,
-                              headers=headers,
-                              )
+    headers = {
+        "Authorization": f"Token {token}",
+    }
+    response = api_client.get(
+        url,
+        headers=headers,
+    )
     assert response.status_code == 200
-    assert response.json()['id'] == 1
-    assert response.json()['first_name'] == user.first_name
-    assert response.json()['last_name'] == user.last_name
-    assert response.json()['email'] == user.email
+    assert response.json()["id"] == 1
+    assert response.json()["first_name"] == user.first_name
+    assert response.json()["last_name"] == user.last_name
+    assert response.json()["email"] == user.email
 
 
-# test details_post
+# check details/ [POST]
 def test_user_details_post(login):
     api_client, user, token = login
-    url_view = 'user/details/'
+    url_view = "user/details/"
     url = URL_BASE + url_view
-    #Меняем данные пользователя добавив "_new"
-    password_new = f'{user.password}_new'
-    first_name_new = f'{user.first_name}_new'
-    last_name_new = f'{user.last_name}_new'
-    data = {'first_name': first_name_new,
-            'last_name': last_name_new,
-            'password': password_new}
-    headers = {'Authorization': f"Token {token}", }
-    response = api_client.post(url,
-                               headers=headers,
-                               data=data,
-                               )
+    # Меняем данные пользователя добавив "_new"
+    password_new = f"{user.password}_new"
+    first_name_new = f"{user.first_name}_new"
+    last_name_new = f"{user.last_name}_new"
+    data = {
+        "first_name": first_name_new,
+        "last_name": last_name_new,
+        "password": password_new,
+    }
+    headers = {
+        "Authorization": f"Token {token}",
+    }
+    response = api_client.post(
+        url,
+        headers=headers,
+        data=data,
+    )
     assert response.status_code == 200
-    assert response.json()['Status'] == True
+    assert response.json()["Status"] == True
 
     # проверяем изменения
 
     # выходим из системы, чтобы проверить новый пароль
-    url_logout = URL_BASE + 'user/logout/'
-    response = api_client.post(url_logout, headers=headers,)
+    url_logout = URL_BASE + "user/logout/"
+    response = api_client.post(
+        url_logout,
+        headers=headers,
+    )
     assert response.status_code == 200
-    assert response.json()['Status'] == True
+    assert response.json()["Status"] == True
 
     # входим в систему с новым паролем
-    url_login = URL_BASE + 'user/login/'
-    data = {'email': user.email,
-            'password': password_new,
-            }
-    response = api_client.post(url_login,
-                               data=data,
-                               )
-    token = response.json()['Token']
+    url_login = URL_BASE + "user/login/"
+    data = {
+        "email": user.email,
+        "password": password_new,
+    }
+    response = api_client.post(
+        url_login,
+        data=data,
+    )
+    token = response.json()["Token"]
     assert response.status_code == 200
-    assert response.json()['Status'] == True
+    assert response.json()["Status"] == True
 
     # проверяем новые данные пользователя
-    headers = {'Authorization': f"Token {token}",}
-    response = api_client.get(url, headers=headers,)
-    assert response.json()['id'] == 1
-    assert response.json()['first_name'] == first_name_new
-    assert response.json()['last_name'] == last_name_new
+    headers = {
+        "Authorization": f"Token {token}",
+    }
+    response = api_client.get(
+        url,
+        headers=headers,
+    )
+    assert response.json()["id"] == 1
+    assert response.json()["first_name"] == first_name_new
+    assert response.json()["last_name"] == last_name_new
 
 
-# check /api/v1/user/password_reset
+# check user/password_reset
 def test_user_password_reset(login):
     api_client, user, _ = login
-    url_view = 'user/password_reset/'
+    url_view = "user/password_reset/"
     url = URL_BASE + url_view
-    data = {'email': user.email,}
-    response = api_client.post(url,
-                           data=data,
-                           )
-    token = ResetPasswordToken.objects.get(user=user,)
+    data = {
+        "email": user.email,
+    }
+    response = api_client.post(
+        url,
+        data=data,
+    )
+    token = ResetPasswordToken.objects.get(
+        user=user,
+    )
 
     assert response.status_code == 200
-    assert response.json()['status'] == 'OK'
+    assert response.json()["status"] == "OK"
     assert token.key
 
-# check /api/v1/user/password_reset/confirm/
+
+# check user/password_reset/confirm/
 def test_user_password_reset_confirm(login):
     # подготовка: создание пользоателя и токена восстановления пароля
     api_client, user, _ = login
-    url_view = 'user/password_reset/'
+    url_view = "user/password_reset/"
     url = URL_BASE + url_view
-    data = {'email': user.email,}
-    api_client.post(url, data=data,)
-    token = ResetPasswordToken.objects.get(user=user,).key
+    data = {
+        "email": user.email,
+    }
+    api_client.post(
+        url,
+        data=data,
+    )
+    token = ResetPasswordToken.objects.get(
+        user=user,
+    ).key
     # проврка password_reset/confirm/
-    url_view = 'user/password_reset/confirm/'
+    url_view = "user/password_reset/confirm/"
     url = URL_BASE + url_view
-    password_new = 'Password_new_' + str(uuid.uuid4())
-    data = {'token': token,
-            'password': password_new}
-    response = api_client.post(url,
-                               data=data,
-                               )
+    password_new = "Password_new_" + str(uuid.uuid4())
+    data = {"token": token, "password": password_new}
+    response = api_client.post(
+        url,
+        data=data,
+    )
     assert response.status_code == 200
-    assert response.json()['status'] == 'OK'
+    assert response.json()["status"] == "OK"
     # проверка нового пароля
-    url_view = 'user/login/'
+    url_view = "user/login/"
     url = URL_BASE + url_view
-    data = {'email': user.email,
-            'password': password_new,
-            }
-    response = api_client.post(url,
-                               data=data,
-                               )
+    data = {
+        "email": user.email,
+        "password": password_new,
+    }
+    response = api_client.post(
+        url,
+        data=data,
+    )
     assert response.status_code == 200
-    assert response.json()['Token'] == Token.objects.get(user=user).key
+    assert response.json()["Token"] == Token.objects.get(user=user).key
 
 
 # start tests
