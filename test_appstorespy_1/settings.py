@@ -121,6 +121,9 @@ DATABASES_ALL = {
     DB_SQLITE: {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+        'OPTIONS': {
+            'timeout': 20,
+        },
     },
     DB_POSTGRESQL: {
         "ENGINE": "django.db.backends.postgresql",
@@ -130,9 +133,21 @@ DATABASES_ALL = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "password"),
         "PORT": int(os.environ.get("POSTGRES_PORT", "5432")),
     },
+    # 'MONGO_DB': {
+    #         'ENGINE': 'djongo',
+    #         'NAME': 'mongo_db',
+    #         # 'ENFORCE_SCHEMA': False,
+    #         'CLIENT': {
+    #             # 'host': 'mongodb+srv://ddd:123@127.0.0.1:27017/files?authSource=admin',
+    #             'host': 'mongodb://ddd:123@127.0.0.1:27017/files?authSource=admin',
+    #         },
+    # }
 }
 
-DATABASES = {"default": DATABASES_ALL[os.environ.get("DJANGO_DB", DB_SQLITE)]}
+DATABASES = {
+    "default": DATABASES_ALL[os.environ.get("DJANGO_DB", DB_SQLITE)],
+    # 'mongo_db': DATABASES_ALL['MONGO_DB']
+}
 
 
 # Password validation
@@ -173,6 +188,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media/")
+
+FILES_UPLOADED = os.path.join(MEDIA_ROOT, "files_uploaded/")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

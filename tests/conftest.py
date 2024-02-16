@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime
 
 import pytest
 from model_bakery import baker
@@ -94,13 +95,15 @@ def create_token():
 
 @pytest.fixture
 def tmp_file(tmp_path, request):
-    file_name = "test_file_" + str(uuid.uuid4())
+    file_name = "test_at_" + str(datetime.now())
     file_ext = request.param
     file_name = os.path.join(tmp_path, f"{file_name}.{file_ext}")
     with open(file_name, "w+") as file:
         # file.write(io.BytesIO(b"some initial text data"))
-        file.write(f"test {file_name}")
+        file.write(f"test_file path {file_name}")
     return file_name
+
+
 
 
 # for auth0

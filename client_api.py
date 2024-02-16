@@ -17,7 +17,7 @@ def base_request(
     print()
     print(method, url_view)
     if method == "get":
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, timeout=5, verify=False)
     if method == "post":
         response = requests.post(url, headers=headers, data=data, files=files)
     if method == "put":
@@ -178,15 +178,18 @@ def delete(token=None):
 
 # file/upload/
 def upload(token=None):
-    url_view = "file/upload/"
+    url_view = "file/db/upload/"
     if not token:
         token = input("Введите token пользователя = ")
     headers = get_headers(token=token)
 
     CURR_DIR = os.path.dirname(os.path.realpath(__file__))
     file = os.path.join(CURR_DIR, "test_file.txt")
+
     uploaded_file_name = "test_uploaded_file.txt"
-    with open(file, "rb") as f:
+    with open(file, "r+") as f:
+        f.write(f'begin - {str(time.time())} - end')
+        f.seek(0)
         files = {"file": (uploaded_file_name, f, "text/x-spam")}
         try:
             response, json_status = base_request(
@@ -207,11 +210,11 @@ def upload(token=None):
 
 # file/upload/
 def download(token=None, file_id=None):
-    url_view = "file/download/"
+    url_view = "file/db/download/"
     if not token:
         token = input("Введите token пользователя = ")
     if not file_id:
-        file_id = input("Введите file_id = ")
+        file_id = int(input("Введите file_id = "))
     headers = get_headers(token=token)
     params = {
         "file_id": file_id,
@@ -223,12 +226,15 @@ def download(token=None, file_id=None):
         headers=headers,
         params=params,
     )
+    # print(response.json())
     print(type(response))
-    # if response.status_code == 200:
-    #     with open('file_test_download.txt', 'wb') as f:
-    #         f.write(response.getvalue())
-    # else:
-    #     return response
+    print(response.text)
+    print(response.content)
+    if response.status_code == 200:
+        with open('file_test_download.txt', 'w') as f:
+            f.write(response.text)
+    else:
+        return response
 
 
 # file/processing/
@@ -419,7 +425,11 @@ def api_test():
         input("Do?")
         delete(token=token)
     elif a == "21":
-        download()
+        token = '21855aebd65f2a69e457874415ca4b1a620540aa'
+        upload(token=token)
+    elif a == "20":
+        token = '21855aebd65f2a69e457874415ca4b1a620540aa'
+        download(token=token)
 
     else:
         pass
@@ -432,4 +442,4 @@ if __name__ == "__main__":
     # curl --location --request POST 'http://localhost:8000/api/upload-file/' \
     # --form 'file=@"/path/to/yourfile.pdf"'
 
-# 75be8865c33efee40
+

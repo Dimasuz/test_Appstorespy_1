@@ -1,13 +1,31 @@
 from rest_framework import serializers
 
-from .models import UploadFile
+from .models import UploadFile, FileOnDisk, FileInDb
 
 
-class FileUploadSerializer(serializers.ModelSerializer):
+class UploadFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadFile
         fields = (
-            "file",
-            "file_path",
+            "file_name",
             "uploaded_on",
+            'user',
+        )
+
+
+class FileInDbSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FileInDb
+        fields = (
+            "file",
+            "file_id",
+        )
+
+
+class FileOnDiskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FileOnDisk
+        fields = (
+            "file",
+            "file_id",
         )
