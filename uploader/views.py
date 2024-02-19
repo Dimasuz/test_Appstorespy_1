@@ -1,7 +1,6 @@
 import asyncio
 import os.path
 from datetime import datetime, timedelta
-from wsgiref.util import FileWrapper
 
 import aiofiles
 
@@ -20,8 +19,9 @@ from rest_framework.views import APIView
 from test_appstorespy_1.settings import MAX_TIME_UPLOAD_FILE
 from test_appstorespy_1.tasks import processing_file
 
-from .models import UploadFile, FileInDb, FileInDb
+from .models import UploadFile, FileInDb
 from .serializers import UploadFileSerializer, FileOnDiskSerializer ,FileInDbSerializer
+
 
 @extend_schema(
     request=UploadFileSerializer,
@@ -33,25 +33,28 @@ class FileUploadToDbAPIView(APIView):
 
     # Upload file by method POST
     """POST"""
-    async def upladed_file_save(self, file, file_upload):
-        file = FileInDb(file=file, file_id=file_upload).asave()
-        # file = FileInDefDb(file=file, file_id=file_upload).asave(using='mongo_db')
+    # # dirict to model
+    # async def upladed_file_save(self, file, file_upload):
+    #     file = FileInDb(file=file, file_id=file_upload).asave()
+    #     # file = FileInDefDb(file=file, file_id=file_upload).asave(using='mongo_db')
+    #     await file
 
-        await file
-
-        # from asgiref.sync import sync_to_async
-        # serializer_class = FileInDefDbSerializer
-        # data = {'file': file, 'file_id': file_upload.pk}
-        # serializer = await sync_to_async(serializer_class, thread_sensitive=True)(data=data)
-        # if await sync_to_async(serializer.is_valid, thread_sensitive=True)():
-        #     uploaded_file_id = await sync_to_async(serializer.save().pk, thread_sensitive=True)()
+    # by serializer
+    from asgiref.sync import sync_to_async
+    @sync_to_async
+    def upladed_file_save(self, file, file_upload):
+        serializer_class = FileInDbSerializer
+        data = {'file': file, 'file_id': file_upload.pk}
+        serializer = serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
 
 
     async def handle_uploaded_file(self, file, file_upload):
         task = asyncio.create_task(
             self.upladed_file_save(file, file_upload)
         )
-        await task
+        # await task
         # ограничим время загрузки файла
         stop_time = datetime.now() + timedelta(minutes=int(MAX_TIME_UPLOAD_FILE))
         while datetime.now() < stop_time:
@@ -81,9 +84,21 @@ class FileUploadToDbAPIView(APIView):
                     serializer.errors, status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # # sync upload
+            # sync upload
+            # dirict to model
             # FileInDb(file=file, file_id=file_upload).save()
             # return JsonResponse({"Status": True, "File_id": file_upload.pk}, status=201)
+            # # by serializer
+            # serializer_class = FileInDbSerializer
+            # data = {'file': file, 'file_id': file_upload.pk}
+            # serializer = serializer_class(data=data)
+            # if serializer.is_valid():
+            #     serializer.save()
+            #     return JsonResponse({"Status": True, "File_id": file_upload.pk}, status=201)
+            # else:
+            #     return Response(
+            #         serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            #     )
 
             # async upload
             uploaded_file = asyncio.run(self.handle_uploaded_file(file, file_upload))
@@ -97,14 +112,13 @@ class FileUploadToDbAPIView(APIView):
         else:
             return JsonResponse({'Status': False, 'Error': 'There is not "file" in the request.'}, status=400)
 
+
     # Download file by method GET
     """GET"""
     def get(self, request, *args, **kwargs):
 
         if not request.user.is_authenticated:
-            return JsonResponse(
-                {"Status": False, "Error": "Log in required"}, status=403
-            )
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403,)
 
         file_id = request.query_params.get("file_id", None)
 
@@ -113,7 +127,6 @@ class FileUploadToDbAPIView(APIView):
             try:
                 file = UploadFile.objects.all().filter(pk=file_id)[0]
             except IndexError:
-                # except Exception:
                 return JsonResponse(
                     {"Status": False, "Error": "File_id not found."}, status=403
                 )
@@ -125,29 +138,29 @@ class FileUploadToDbAPIView(APIView):
                 )
 
             try:
-                # download_file = FileInDefDb.objects.get(file_id=file_id)
                 download_file = FileInDb.objects.get(file_id=file)
             except IndexError:
-                # except BaseException:
                 return JsonResponse({"Status": False, "Error": "File_id not found."}, status=403, )
 
-
-            response = HttpResponse(download_file.file,
-                                    # content_type="text/csv",
-                                    # headers={"Content-Disposition": f'attachment; filename={file_name}'},
-                                    )
+            # response = HttpResponse(download_file.file,
+            #                         # content_type="text/csv",
+            #                         # headers={"Content-Disposition": f'attachment;
+            #                                    filename={file_name}'},
+            #                         )
 
             # response = StreamingHttpResponse(download_file.file,
-            #     content_type="text/csv",
-            #     headers={"Content-Disposition": f'attachment; filename={download_file.file.name}'},
-            # )
+            #                           content_type="text/csv",
+            #                           headers={"Content-Disposition": f'attachment;
+            #                                    filename={download_file.file.name}'},
+            #                           )
 
-            # response = FileResponse(download_file.file,
-            #         content_type='application/force-download',
-            #         as_attachment=True,)
-            # response['Content-Disposition'] = f'attachment; filename="{download_file.file.name}"'
+            response = FileResponse(download_file.file,
+                    content_type='application/force-download',
+                    as_attachment=True,)
+            response['Content-Disposition'] = f'attachment; filename="{download_file.file.name}"'
 
-            file.delete()
+            if response.status_code == 200:
+                file.delete()
 
             return response
 
@@ -290,7 +303,7 @@ class FileProcessingAPIView(APIView):
     Класс для обработки файла
     """
 
-    # Processing file by method GET
+    # Processing file by method PUT
     parser_classes = (MultiPartParser, FormParser)
     serializer_class = UploadFileSerializer
 
@@ -304,22 +317,23 @@ class FileProcessingAPIView(APIView):
         file_id = request.query_params.get("file_id", None)
 
         if file_id is not None:
+
             try:
                 file = UploadFile.objects.all().filter(pk=file_id)[0]
-                processing_file = os.path.join(settings.FILES_UPLOADED, file.file)
-                             # отправим файл на обработку в Celery
-                async_result = processing_file.delay(processing_file)
-                return JsonResponse(
-                    {
-                        "Status": True,
-                        "Task_id": async_result.task_id,
-                    },
-                    status=201,
-                )
-            except Exception as e:
-                return e, Http404("File not found")
+            except IndexError:
+                return JsonResponse({"Status": False, "Error": "File_id not found."}, status=403)
 
-        return JsonResponse({"Status": False, "Error": "File_id required"}, status=400)
+            if file.user != request.user:
+                return JsonResponse({"Status": False, "Error": "You try to put not yours file."},
+                    status=403, )
+
+            # processing by Celery
+            async_result = processing_file.delay(file_id)
+
+            return JsonResponse({"Status": True,"Task_id": async_result.task_id,}, status=201,)
+
+        else:
+            return JsonResponse({"Status": False, "Error": "file_id required"}, status=400)
 
 
 class CeleryStatus(APIView):
