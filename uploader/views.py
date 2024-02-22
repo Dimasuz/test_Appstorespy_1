@@ -6,8 +6,9 @@ import aiofiles
 
 from celery.result import AsyncResult
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.files import File
-from django.http import FileResponse, Http404, JsonResponse, StreamingHttpResponse, HttpResponse
+from django.http import JsonResponse, FileResponse, StreamingHttpResponse, HttpResponse
 from drf_spectacular.utils import (OpenApiExample, OpenApiParameter,
                                    extend_schema)
 from rest_framework import status
@@ -33,13 +34,15 @@ class FileUploadToDbAPIView(APIView):
 
     # Upload file by method POST
     """POST"""
-    # # dirict to model
+
+    # # save dirict to model
     # async def upladed_file_save(self, file, file_upload):
     #     file = FileInDb(file=file, file_id=file_upload).asave()
     #     # file = FileInDefDb(file=file, file_id=file_upload).asave(using='mongo_db')
     #     await file
 
-    # by serializer
+
+    # save by serializer
     from asgiref.sync import sync_to_async
     @sync_to_async
     def upladed_file_save(self, file, file_upload):
@@ -75,7 +78,7 @@ class FileUploadToDbAPIView(APIView):
         if "file" in request.FILES:
             file = request.FILES["file"]
 
-            data = {'file_name': file.name, 'user': request.user.pk}
+            data = {'file_name': file.name, 'user': request.user.pk, 'file_store': 'db'}
             serializer = UploadFileSerializer(data=data)
             if serializer.is_valid():
                 file_upload = serializer.save()
@@ -84,30 +87,33 @@ class FileUploadToDbAPIView(APIView):
                     serializer.errors, status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # sync upload
-            # dirict to model
-            # FileInDb(file=file, file_id=file_upload).save()
-            # return JsonResponse({"Status": True, "File_id": file_upload.pk}, status=201)
-            # # by serializer
-            # serializer_class = FileInDbSerializer
-            # data = {'file': file, 'file_id': file_upload.pk}
-            # serializer = serializer_class(data=data)
-            # if serializer.is_valid():
-            #     serializer.save()
-            #     return JsonResponse({"Status": True, "File_id": file_upload.pk}, status=201)
-            # else:
-            #     return Response(
-            #         serializer.errors, status=status.HTTP_400_BAD_REQUEST
-            #     )
+            sync_mode = request.data.get('sync_mode', None)
 
-            # async upload
-            uploaded_file = asyncio.run(self.handle_uploaded_file(file, file_upload))
-            if uploaded_file['Status']:
-                return JsonResponse({"Status": True, "File_id": file_upload.pk}, status=201)
+            if sync_mode:
+                # sync upload
+                # # dirict to model
+                # FileInDb(file=file, file_id=file_upload).save()
+                # return JsonResponse({"Status": True, "File_id": file_upload.pk}, status=201)
+                # by serializer
+                serializer_class = FileInDbSerializer
+                data = {'file': file, 'file_id': file_upload.pk}
+                serializer = serializer_class(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return JsonResponse({"Status": True, "File_id": file_upload.pk}, status=201)
+                else:
+                    return Response(
+                        serializer.errors, status=status.HTTP_400_BAD_REQUEST
+                    )
             else:
-                return JsonResponse(
-                    {'Status': False, 'Error': 'File was not upload.'}, status=400
-                )
+                # async upload
+                uploaded_file = asyncio.run(self.handle_uploaded_file(file, file_upload))
+                if uploaded_file['Status']:
+                    return JsonResponse({"Status": True, "File_id": file_upload.pk}, status=201)
+                else:
+                    return JsonResponse(
+                        {'Status': False, 'Error': 'File was not upload.'}, status=400
+                    )
 
         else:
             return JsonResponse({'Status': False, 'Error': 'There is not "file" in the request.'}, status=400)
@@ -125,20 +131,20 @@ class FileUploadToDbAPIView(APIView):
         if file_id is not None:
 
             try:
-                file = UploadFile.objects.all().filter(pk=file_id)[0]
-            except IndexError:
+                uploaded_file = UploadFile.objects.get(pk=file_id)
+            except ObjectDoesNotExist as ex:
                 return JsonResponse(
-                    {"Status": False, "Error": "File_id not found."}, status=403
+                    {"Status": False, "Error": "File not found."}, status=403
                 )
 
-            if file.user != request.user:
+            if uploaded_file.user != request.user:
                 return JsonResponse(
                     {"Status": False, "Error": "You try to get not yours file."},
                     status=403,
                 )
 
             try:
-                download_file = FileInDb.objects.get(file_id=file)
+                download_file = FileInDb.objects.get(file_id=uploaded_file)
             except IndexError:
                 return JsonResponse({"Status": False, "Error": "File_id not found."}, status=403, )
 
@@ -159,12 +165,12 @@ class FileUploadToDbAPIView(APIView):
                     as_attachment=True,)
             response['Content-Disposition'] = f'attachment; filename="{download_file.file.name}"'
 
-            if response.status_code == 200:
-                file.delete()
+            # if response.status_code == 200:
+            #     uploaded_file.delete()
 
             return response
 
-        return JsonResponse({"Status": False, "Error": "File_id required"}, status=400)
+        return JsonResponse({"Status": False, "Error": "file_id is required"}, status=400)
 
 
 @extend_schema(
@@ -214,6 +220,7 @@ class FileUploadToDiskAPIView(APIView):
 
             request.data["file_name"] = file.name
             request.data["user"] = request.user.pk
+            request.data['file_store'] = 'disk'
             serializer = self.serializer_classes[0](data=request.data)
 
             if serializer.is_valid():
@@ -233,7 +240,7 @@ class FileUploadToDiskAPIView(APIView):
                 serializer = self.serializer_classes[1](data=data)
 
                 if serializer.is_valid():
-                    uploaded_file = serializer.save()
+                    serializer.save()
                     return JsonResponse(
                         {'Status': True, 'File_id': upload_file.pk}, status=201
                     )
@@ -265,20 +272,20 @@ class FileUploadToDiskAPIView(APIView):
         if file_id is not None:
 
             try:
-                file = UploadFile.objects.all().filter(pk=file_id)[0]
-            except IndexError as ex:
+                uploaded_file = UploadFile.objects.get(pk=file_id)
+            except ObjectDoesNotExist as ex:
                 return JsonResponse(
-                    {"Status": False, "Error": "File_id not found."}, status=403
+                    {"Status": False, "Error": "File not found."}, status=403
                 )
 
-            if file.user != request.user:
+            if uploaded_file.user != request.user:
                 return JsonResponse(
                     {"Status": False, "Error": "You try to get not yours file."},
                     status=403,
                 )
 
 
-            download_file = os.path.join(settings.FILES_UPLOADED, file.file_name)
+            download_file = os.path.join(settings.FILES_UPLOADED, uploaded_file.file_name)
 
             if os.path.exists(download_file):
                 return FileResponse(
@@ -291,7 +298,7 @@ class FileUploadToDiskAPIView(APIView):
                     {"Status": False, "Error": "File not found"}, status=400
                 )
 
-        return JsonResponse({"Status": False, "Error": "File_id required"}, status=400)
+        return JsonResponse({"Status": False, "Error": "file_id is required"}, status=400)
 
 
 @extend_schema(
@@ -307,23 +314,26 @@ class FileProcessingAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
     serializer_class = UploadFileSerializer
 
-    def get(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
 
         if not request.user.is_authenticated:
             return JsonResponse(
                 {"Status": False, "Error": "Log in required"}, status=403
             )
 
-        file_id = request.query_params.get("file_id", None)
+        # file_id = request.query_params.get("file_id", None)
+        file_id = request.data.get('file_id', None)
 
         if file_id is not None:
 
             try:
-                file = UploadFile.objects.all().filter(pk=file_id)[0]
-            except IndexError:
-                return JsonResponse({"Status": False, "Error": "File_id not found."}, status=403)
+                uploaded_file = UploadFile.objects.get(pk=file_id)
+            except ObjectDoesNotExist as ex:
+                return JsonResponse(
+                    {"Status": False, "Error": "File not found."}, status=403
+                )
 
-            if file.user != request.user:
+            if uploaded_file.user != request.user:
                 return JsonResponse({"Status": False, "Error": "You try to put not yours file."},
                     status=403, )
 
@@ -333,7 +343,7 @@ class FileProcessingAPIView(APIView):
             return JsonResponse({"Status": True,"Task_id": async_result.task_id,}, status=201,)
 
         else:
-            return JsonResponse({"Status": False, "Error": "file_id required"}, status=400)
+            return JsonResponse({"Status": False, "Error": "file_id is required"}, status=400)
 
 
 class CeleryStatus(APIView):
@@ -358,3 +368,38 @@ class CeleryStatus(APIView):
                 return err
 
         return JsonResponse({"Status": False, "Error": "Task_id required"}, status=400)
+
+
+@extend_schema(
+    request=UploadFileSerializer,
+    responses={200: UploadFileSerializer},
+)
+class FileDeleteAPIView(APIView):
+
+    """DELETE"""
+    def delete(self, request, *args, **kwargs):
+
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403,)
+
+        file_id = request.data.get('file_id', None)
+
+        if file_id is not None:
+
+            try:
+                uploaded_file = UploadFile.objects.get(pk=file_id)
+            except ObjectDoesNotExist as ex:
+                return JsonResponse(
+                    {"Status": False, "Error": "File not found."}, status=403
+                )
+
+            if uploaded_file.user == request.user:
+                files_deleted = uploaded_file.delete()
+                return JsonResponse({"Status": True, "Files_deleted": files_deleted[1]['uploader.UploadFile']}, status=200)
+            else:
+                return JsonResponse(
+                    {"Status": False, "Error": "You try to delete not yours file."},
+                    status=403,
+            )
+
+        return JsonResponse({"Status": False, "Error": "file_id is required"}, status=400)

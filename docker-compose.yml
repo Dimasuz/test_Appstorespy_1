@@ -9,16 +9,16 @@ volumes:
 #  media:
 
 services:
-#
-#  redis:
-#    image: redis:7.2
-#    container_name: redis
-#    ports:
-#      - "6379:6379"
-#    networks:
-#      backend:
-#        aliases:
-#          - redis
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    ports:
+      - "6378:6379"
+    networks:
+      backend:
+        aliases:
+          - redis
 
   postgres:
     image: postgres:14.3-alpine3.16

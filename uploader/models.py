@@ -5,8 +5,12 @@ from django.db import models
 
 
 class UploadFile(models.Model):
+    FILE_STORE = {
+        "db": "FileInDb",
+        "disk": "FileOnDisk",
+    }
+    file_store = models.CharField(max_length=20, choices=FILE_STORE)
     file_name = models.CharField(max_length=300)
-    file = models.FileField()
     uploaded_on = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

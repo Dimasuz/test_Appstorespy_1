@@ -1,7 +1,7 @@
-FROM dimasuz/ubuntu2004_python39:v1
+FROM dimasuz/ubuntu2004_python310:v2
 
 # попробовать
-# sudo apt install lsb-release curl gpg
+# RUN apt install lsb-release curl gpg
 # sudo apt-get update
 # sudo apt-get install redis
 

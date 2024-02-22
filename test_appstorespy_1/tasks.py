@@ -4,10 +4,12 @@ from datetime import datetime
 from tempfile import NamedTemporaryFile
 
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import EmailMultiAlternatives
+from django.http import JsonResponse
 
 from test_appstorespy_1.celery import app
-from uploader.models import FileInDb, FileOnDisk, UploadFile
+from uploader.models import UploadFile, FileInDb, FileOnDisk
 
 
 # формирование и отправка писем для применения в celery
@@ -27,33 +29,26 @@ def send_email(email, title, massage):
     msg.send()
 
 
-# таска для обработки файла
+# task for processing file
 @app.task
 def processing_file(file_id):
-    time.sleep(5)
 
-    file = UploadFile.objects.all().filter(pk=file_id)[0]
+    try:
+        uploaded_file = UploadFile.objects.get(pk=file_id)
+        if uploaded_file.file_store == 'db':
+            file = FileInDb.objects.get(file_id=uploaded_file)
+            file_path = file.file.path
+        elif uploaded_file.file_store == 'disk':
+            file = FileOnDisk.objects.get(file_id=uploaded_file)
+            file_path = file.file
+        else:
+            file_path = None
+    except ObjectDoesNotExist as ex:
+        return JsonResponse({"Status": False, "Error": "File not found."}, status=403)
 
-    if file.__class__ == FileInDb:
-        file = FileInDb.objects.filter(file_id__pk=file_id)[0]
-        file_path = file.file.path
-    elif file.__class__ == FileOnDisk:
+    if file_path:
+        with open(file_path, "rb+") as f:
+            f.seek(0, 2)
+            f.write(f'\ncelery_{datetime.now()}'.encode())
 
-
-    with open(file_path, "rb+") as f:
-        f.seek(0, 2)
-        f.write(f'\n"celery_"{datetime.now()}'.encode())
-
-    # with NamedTemporaryFile("w+b", prefix=file.file.name, suffix='') as f:
-    #     f.write(file.file)
-    #     f.write(f'\n"celery_"{datetime.now()}')
-    #     f.seek(0)
-    # o.__class__.__name__
-    # processing_file = os.path.join(settings.FILES_UPLOADED, file.file)
-    # with open(file, 'r+') as f:
-    #     f.seek(0, 2)
-    #     f.write(f'\n"celery_"{datetime.now()}')
-
-    # return file
-
-
+    return file_path
