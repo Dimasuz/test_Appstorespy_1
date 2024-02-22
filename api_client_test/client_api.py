@@ -178,9 +178,15 @@ def delete(token=None):
     return response
 
 
+# ------------------------------------
+# UPLOAD FILE
+url_list = ['disk', 'db']
+url_store = f'file/{url_list[1]}/'
+
 # file/upload/
 def upload(token=None):
-    url_view = "file/db/upload/"
+    url_view = "upload/"
+    url_view = url_store + url_view
     if not token:
         token = input("Введите token пользователя = ")
     headers = get_headers(token=token)
@@ -202,7 +208,8 @@ def upload(token=None):
 
 # file/download/
 def download(token=None, file_id=None):
-    url_view = "file/db/download/"
+    url_view = "download/"
+    url_view = url_store + url_view
     if not token:
         token = input("Введите token пользователя = ")
     if not file_id:
@@ -244,17 +251,40 @@ def processing(token=None, file_id=None):
     if not file_id:
         file_id = input("Введите file_id = ")
     headers = get_headers(token=token)
-    params = {
+    data = {
         "file_id": file_id,
     }
     response, json_status = base_request(
         url_view=url_view,
-        method="get",
+        method="put",
         headers=headers,
-        params=params,
+        data=data,
     )
 
     return response
+
+
+# file/delete/
+def file_delete(token=None, file_id=None):
+    url_view = "file/delete/"
+    if not token:
+        token = input("Введите token пользователя = ")
+    if not file_id:
+        file_id = input("Введите file_id = ")
+    headers = get_headers(token=token)
+    data = {
+        "file_id": file_id,
+    }
+    response, json_status = base_request(
+        url_view=url_view,
+        method="delete",
+        headers=headers,
+        data=data,
+    )
+
+    return response
+
+
 
 
 # celery tesk status-----------------------
@@ -264,17 +294,17 @@ def celery_status(task_id=None):
         task_id = input("Введите task_id = ")
     if task_id:
         celery_status = "-"
-        while not celery_status == "SUCCESS":
-            # status = requests.get(f"{url_base}{url_view}?task_id={task_id}").json()["status"]
+        while celery_status != 'SUCCESS':
+            #  or celery_status != 'FAILURE'
             response, json_status = base_request(
                 url_view=url_view, method="get", params={"task_id": task_id}
             )
             celery_status = response.json()["Status"]
             file = response.json()["Result"]
             time.sleep(1)
-            if not celery_status == "SUCCESS":
-                if input("Stop? y/n") == "y":
-                    return celery_status
+            # if not celery_status == "SUCCESS":
+            #     if input("Stop? y/n") == "y":
+            #         return celery_status
         return celery_status, file
 
 
@@ -431,8 +461,8 @@ def api_test(token=None):
         print(upload(token=token))
         task_id = processing(token=token).json()['Task_id']
         print(task_id)
-        # celery_status(task_id=task_id)
-        download(token=token)
+        celery_status(task_id=task_id)
+        # download(token=token)
     elif a == "24":
         print(f"Обработка файла.")
         file_id = input("file_id = ")
@@ -449,6 +479,11 @@ def api_test(token=None):
         # print(f"Удаление из базы пользователя.")
         # input("Do?")
         # delete(token=token)
+    elif a == "25":
+        print(f"Удаление файла.")
+        file_id = input("file_id = ")
+        file_delete(token=token, file_id=file_id)
+
 
     else:
         pass

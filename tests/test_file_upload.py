@@ -13,14 +13,15 @@ warnings.filterwarnings(action="ignore")
 pytestmark = pytest.mark.django_db
 
 
-url = ['disk', 'db']
-url_file = url[1]
+url_list = ['disk', 'db']
+# url_file = url_list[1]
 
 # file/upload/
 
 # @pytest.mark.parametrize("tmp_file", ["txt", "exe"], indirect=True)
 @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
-def test_upload(login, tmp_file):
+@pytest.mark.parametrize("url_file", url_list)
+def test_upload(login, tmp_file, url_file):
     """POST"""
     url_view = f'file/{url_file}/upload/'
     url = URL_BASE + url_view
@@ -28,6 +29,8 @@ def test_upload(login, tmp_file):
     headers = {'Authorization': f"Token {token}",}
     with open(tmp_file, 'rb') as file:
         data = {"file": file,}
+        if url_file == 'db':
+            data['sync_mode'] = True
         response = api_client.post(url, headers=headers, data=data,)
 
     file_id = response.json()['File_id']
@@ -43,14 +46,14 @@ def test_upload(login, tmp_file):
     assert response.json()['Status'] == True
     assert type(response.json()['File_id']) == int
     assert uploaded_file
-    # assert response.json()['Task_id']
 
     # clear disk
     os.remove(file_path)
 
 
 @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
-def test_upload_not_authorization(login, tmp_file):
+@pytest.mark.parametrize("url_file", url_list)
+def test_upload_not_authorization(login, tmp_file, url_file):
     api_client, user, token = login
     url_view = 'user/logout/'
     url = URL_BASE + url_view
@@ -70,24 +73,26 @@ def test_upload_not_authorization(login, tmp_file):
 # file/download/
 
 @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
-def test_download(login, tmp_file):
+@pytest.mark.parametrize("url_file", url_list)
+def test_download(login, tmp_file, url_file):
     # prepare file by POST
     url_view = f'file/{url_file}/upload/'
     url = URL_BASE + url_view
     api_client, user, token = login
     headers = {'Authorization': f"Token {token}",}
     with open(tmp_file, 'rb') as file_upload:
-        data_post = {"file": file_upload,}
-        response = api_client.post(url, headers=headers, data=data_post,)
-        print(response.json())
+        data = {"file": file_upload,}
+        if url_file == 'db':
+            data['sync_mode'] = True
+        response = api_client.post(url, headers=headers, data=data,)
         file_id = response.json()['File_id']
         file_upload.seek(0)
 
         """GET"""
         url_view = f'file/{url_file}/download/'
         url = URL_BASE + url_view
-        data_get = {'file_id': file_id,}
-        response = api_client.get(url, headers=headers, data=data_get,)
+        data = {'file_id': file_id,}
+        response = api_client.get(url, headers=headers, data=data,)
 
         assert response.status_code == 200
         assert file_upload.read() == response.getvalue()
@@ -102,42 +107,116 @@ def test_download(login, tmp_file):
     os.remove(file_path)
 
 
-#------------------------------------------------------------------------
-# @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
-# def test_download_wrong_user(login, tmp_file, create_token):
-#     # prepare file
-#     url_view = f'file/{url_file}/upload/'
-#     url = URL_BASE + url_view
-#     api_client, user, token = login
-#     headers = {'Authorization': f"Token {token}", }
-#     file_tmp_path = tmp_file
-#     with open(file_tmp_path, 'rb') as file_upload:
-#         data = {"file": file_upload, }
-#         response = api_client.post(url, headers=headers, data=data, )
-#     file_id = response.json()['File_id']
-#     file_uploaded = UploadFile.objects.all().filter(pk=file_id)[0]
-#     file_uploaded_path = os.path.join(settings.FILES_UPLOADED, file_uploaded.file)
-#
-#     """GET"""
-#     url_view = f'file/{url_file}/download/'
-#     url = URL_BASE + url_view
-#     token_wrong_user = create_token
-#     headers = {'Authorization': f"Token {token_wrong_user}", }
-#     data = {'file_id': file_id, }
-#     response = api_client.get(url, headers=headers, data=data, )
-#
-#     assert response.status_code == 403
-#     assert not response.json()['Status']
-#     assert response.json()['Error'] == 'You try to get not yours file.'
-#
-#     # clear
-#     os.remove(file_uploaded_path)
+# file/download/ - wrong user
+@pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
+@pytest.mark.parametrize("url_file", url_list)
+def test_download_wrong_user(login, tmp_file, create_token, url_file):
+    # prepare file
+    url_view = f'file/{url_file}/upload/'
+    url = URL_BASE + url_view
+    api_client, user, token = login
+    headers = {'Authorization': f"Token {token}", }
+    with open(tmp_file, 'rb') as file_upload:
+        data = {"file": file_upload,}
+        if url_file == 'db':
+            data['sync_mode'] = True
+        response = api_client.post(url, headers=headers, data=data,)
+        file_id = response.json()['File_id']
+        file_upload.seek(0)
 
-#     # print(response.json())
-#     # assert False
+    """GET"""
+    url_view = f'file/{url_file}/download/'
+    url = URL_BASE + url_view
+    token_wrong_user = create_token
+    headers = {'Authorization': f"Token {token_wrong_user}", }
+    data = {'file_id': file_id, }
+    response = api_client.get(url, headers=headers, data=data, )
+
+    assert response.status_code == 403
+    assert not response.json()['Status']
+    assert response.json()['Error'] == 'You try to get not yours file.'
+
+    # clear disk
+    if url_file == 'db':
+        uploaded_file = FileInDb.objects.all().filter(pk=file_id)[0].file
+        file_path = os.path.join(settings.MEDIA_ROOT, uploaded_file.file.name)
+    elif url_file == 'disk':
+        file_path = FileOnDisk.objects.all().filter(pk=file_id)[0].file
+
+    os.remove(file_path)
 
 
+@pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
+@pytest.mark.parametrize("url_file", url_list)
+def test_processing_file(login, tmp_file, url_file):
+    # prepare file
+    url_view = f'file/{url_file}/upload/'
+    url = URL_BASE + url_view
+    api_client, user, token = login
+    headers = {'Authorization': f"Token {token}", }
+    with open(tmp_file, 'rb') as file_upload:
+        data = {"file": file_upload,}
+        if url_file == 'db':
+            data['sync_mode'] = True
+        response = api_client.post(url, headers=headers, data=data,)
+        file_id = response.json()['File_id']
+        file_upload.seek(0)
 
+    """PUT"""
+    url_view = 'file/processing/'
+    url = URL_BASE + url_view
+    data = {'file_id': file_id, }
+    response = api_client.put(url, headers=headers, data=data,)
+    print(response.json())
+
+    assert response.status_code == 201
+    assert response.json()['Status']
+    assert response.json()['Task_id']
+
+    # clear disk
+    if url_file == 'db':
+        uploaded_file = FileInDb.objects.all().filter(pk=file_id)[0].file
+        file_path = os.path.join(settings.MEDIA_ROOT, uploaded_file.file.name)
+    elif url_file == 'disk':
+        file_path = FileOnDisk.objects.all().filter(pk=file_id)[0].file
+
+    os.remove(file_path)
+
+@pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
+@pytest.mark.parametrize("url_file", url_list)
+def test_delete_file(login, tmp_file, url_file):
+    # prepare file
+    url_view = f'file/{url_file}/upload/'
+    url = URL_BASE + url_view
+    api_client, user, token = login
+    headers = {'Authorization': f"Token {token}", }
+    with open(tmp_file, 'rb') as file_upload:
+        data = {"file": file_upload, }
+        if url_file == 'db':
+            data['sync_mode'] = True
+        response = api_client.post(url, headers=headers, data=data, )
+        file_id = response.json()['File_id']
+        file_upload.seek(0)
+
+    if url_file == 'db':
+        uploaded_file = FileInDb.objects.get(pk=file_id).file
+        file_path = os.path.join(settings.MEDIA_ROOT, uploaded_file.file.name)
+    elif url_file == 'disk':
+        file_path = FileOnDisk.objects.get(pk=file_id).file
+
+    """DELETE"""
+    url_view = 'file/delete/'
+    url = URL_BASE + url_view
+    data = {'file_id': file_id, }
+    response = api_client.delete(url, headers=headers, data=data, )
+    print(response.json())
+
+    assert response.status_code == 200
+    assert response.json()['Status']
+    assert response.json()['Files_deleted'] == 1
+
+    # clear disk
+    os.remove(file_path)
 
 
 

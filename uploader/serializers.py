@@ -7,6 +7,7 @@ class UploadFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadFile
         fields = (
+            "file_store",
             "file_name",
             "uploaded_on",
             'user',

@@ -104,7 +104,5 @@ def tmp_file(tmp_path, request):
     return file_name
 
 
-
-
 # for auth0
 # https://github.com/mozilla-iam/auth0-tests/tree/master
