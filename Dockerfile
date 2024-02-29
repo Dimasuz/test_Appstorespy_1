@@ -1,4 +1,4 @@
-FROM dimasuz/ubuntu2004_python310:v3
+FROM dimasuz/ubuntu2004_python310:v4
 
 COPY . /usr/src/app
 

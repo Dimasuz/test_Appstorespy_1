@@ -9,7 +9,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.http import JsonResponse
 
 from test_appstorespy_1.celery import app
-from uploader.models import UploadFile, FileInDb, FileOnDisk
+from uploader.models import FileInDb, FileOnDisk, UploadFile
 
 
 # формирование и отправка писем для применения в celery
@@ -35,10 +35,10 @@ def processing_file(file_id):
 
     try:
         uploaded_file = UploadFile.objects.get(pk=file_id)
-        if uploaded_file.file_store == 'db':
+        if uploaded_file.file_store == "db":
             file = FileInDb.objects.get(file_id=uploaded_file)
             file_path = file.file.path
-        elif uploaded_file.file_store == 'disk':
+        elif uploaded_file.file_store == "disk":
             file = FileOnDisk.objects.get(file_id=uploaded_file)
             file_path = file.file
         else:
@@ -49,6 +49,6 @@ def processing_file(file_id):
     if file_path:
         with open(file_path, "rb+") as f:
             f.seek(0, 2)
-            f.write(f'\ncelery_{datetime.now()}'.encode())
+            f.write(f"\ncelery_{datetime.now()}".encode())
 
     return file_path

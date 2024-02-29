@@ -5,11 +5,8 @@ from django.db import models
 
 
 class UploadFile(models.Model):
-    FILE_STORE = {
-        "db": "FileInDb",
-        "disk": "FileOnDisk",
-    }
-    file_store = models.CharField(max_length=20, choices=FILE_STORE)
+    FILE_STORE = settings.FILE_STORE
+    file_store = models.CharField(max_length=20, choices=FILE_STORE, default="db")
     file_name = models.CharField(max_length=300)
     uploaded_on = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(
@@ -31,7 +28,7 @@ class FileInDb(models.Model):
     file_id = models.OneToOneField(
         UploadFile,
         on_delete=models.CASCADE,
-        related_name='file_in_db',
+        related_name="file_in_db",
         primary_key=True,
     )
     #
@@ -41,11 +38,12 @@ class FileInDb(models.Model):
     #         qs = qs.using(self._db)
     #     return qs
 
+
 class FileOnDisk(models.Model):
     file = models.CharField(max_length=300)
     file_id = models.OneToOneField(
         UploadFile,
         on_delete=models.CASCADE,
         related_name="file_on_disk",
-        primary_key=True
+        primary_key=True,
     )

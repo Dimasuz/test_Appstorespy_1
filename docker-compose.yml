@@ -5,8 +5,8 @@ networks:
 
 volumes:
   pgdata:
-#  static:
-#  media:
+  static:
+  media:
 
 services:
 
@@ -14,7 +14,7 @@ services:
     image: redis:7.2
     container_name: redis
     ports:
-      - "6378:6379"
+      - "6379:6379"
     networks:
       backend:
         aliases:
@@ -60,76 +60,78 @@ services:
 #        aliases:
 #          - mongo_db
 
-#  web:
-#    build: .
-#    container_name: web
-#    env_file:
-#      - .env
-##    expose:
-##      - 8000
-#    ports:
-#      - "5000:8000"
-#    volumes:
-#      - .:/usr/src/app
-##      - static:/usr/src/app/static
-##      - media:/usr/src/app/media
-#    links:
-#      - redis
-##      - postgres
-#    depends_on:
-#      - redis
-##      - postgres
-#    networks:
-#      backend:
-#        aliases:
-#          - web
+  web:
+    build: .
+    container_name: web
+    env_file:
+      - .env
+#    expose:
+#      - 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/usr/src/app
+      - static:/usr/src/app/static
+      - media:/usr/src/app/media
+    links:
+      - redis
+      - postgres
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      backend:
+        aliases:
+          - web
 
-#  celery:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile.celery
-#    container_name: celery
-#    env_file:
-#      - .env
-#    links:
-#      - redis
-#      - web
-#    depends_on:
-#      - redis
-#      - web
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    container_name: celery
+    env_file:
+      - .env
+    volumes:
+      - .:/usr/src/app
+      - static:/usr/src/app/static
+      - media:/usr/src/app/media
+    links:
+      - redis
+      - web
+    depends_on:
+      - redis
+      - web
 #      - mongo
-#    networks:
-#      backend:
-#        aliases:
-#          - celery
-#    volumes:
-#      - .:/usr/src/app
+    networks:
+      backend:
+        aliases:
+          - celery
 
-#
-#  pgadmin:
-#    container_name: pgadmin
-#    image: dpage/pgadmin4:5.7
-#    environment:
-#      PGADMIN_DEFAULT_EMAIL: "d@d.dd"
-#      PGADMIN_DEFAULT_PASSWORD: "123"
-#      PGADMIN_CONFIG_SERVER_MODE: "False"
-##    volumes:
-##      - ./pgadmin:/var/lib/pgadmin
-#    ports:
-#      - "5050:80"
-#    restart: unless-stopped
-#    depends_on:
-#      - postgres
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: '0.5'
-#          memory: 2G
-#    networks:
-#      backend:
-#        aliases:
-#          - pgadmin
-#
+
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4:5.7
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "d@d.dd"
+      PGADMIN_DEFAULT_PASSWORD: "123"
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+#    volumes:
+#      - ./pgadmin:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 2G
+    networks:
+      backend:
+        aliases:
+          - pgadmin
+
 #  nginx:
 #    build: ./nginx
 #    ports:

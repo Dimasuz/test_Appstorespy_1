@@ -37,8 +37,8 @@ SECRET_KEY = os.environ.get(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
-DEBUG = os.environ.get("DEBUG", 1)
+# DEBUG = 1
+DEBUG = int(os.environ.get("DEBUG", 0))
 
 ALLOWED_HOSTS = ["*"]
 
@@ -87,6 +87,8 @@ MIDDLEWARE = [
     # for django-silk
     "silk.middleware.SilkyMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    # whitenoise for collect static
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = "test_appstorespy_1.urls"
@@ -121,8 +123,8 @@ DATABASES_ALL = {
     DB_SQLITE: {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
-        'OPTIONS': {
-            'timeout': 20,
+        "OPTIONS": {
+            "timeout": 20,
         },
     },
     DB_POSTGRESQL: {
@@ -212,23 +214,23 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.BasicAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    # 'PAGE_SIZE': 40,
-    #
-    # 'DEFAULT_RENDERER_CLASSES': (
-    #     'rest_framework.renderers.JSONRenderer',
-    #     'rest_framework.renderers.BrowsableAPIRenderer',
-    # ),
-    #
-    # 'DEFAULT_THROTTLE_CLASSES': [
-    #     'rest_framework.throttling.AnonRateThrottle',
-    #     'rest_framework.throttling.UserRateThrottle'
-    # ],
-    # 'DEFAULT_THROTTLE_RATES': {
-    #     'anon': '100/day',
-    #     'user': '1000/day'
-    # },
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 40,
+    "DEFAULT_RENDERER_CLASSES": (
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ),
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {"anon": "100/day", "user": "1000/day"},
     # 'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    "TEST_REQUEST_RENDERER_CLASSES": [
+        "rest_framework.renderers.MultiPartRenderer",
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.TemplateHTMLRenderer",
+    ],
 }
 
 INTERNAL_IPS = [
@@ -237,11 +239,16 @@ INTERNAL_IPS = [
 
 # Celery Configuration Options
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+CELERY_RESULT_BACKEND = os.environ.get(
+    "CELERY_RESULT_BACKEND", "redis://localhost:6379/1"
+)
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TASK_SELERLIZER = "json"
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Project Appstorespy API",
@@ -325,3 +332,8 @@ SITE_ID = 1
 MAX_TIME_UPLOAD_FILE = os.environ.get("MAX_TIME_UPLOAD_FILE")
 
 API_VERTION = "v1"
+
+FILE_STORE = {
+    "db": "FileInDb",
+    "disk": "FileOnDisk",
+}

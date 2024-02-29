@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import UploadFile, FileOnDisk, FileInDb
+from .models import FileInDb, FileOnDisk, UploadFile
 
 
 class UploadFileSerializer(serializers.ModelSerializer):
@@ -10,7 +10,7 @@ class UploadFileSerializer(serializers.ModelSerializer):
             "file_store",
             "file_name",
             "uploaded_on",
-            'user',
+            "user",
         )
 
 

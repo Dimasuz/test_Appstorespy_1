@@ -19,7 +19,9 @@ def base_request(
     print()
     print(method, url_view)
     if method == "get":
-        response = requests.get(url, headers=headers, params=params, timeout=60, verify=False)
+        response = requests.get(
+            url, headers=headers, params=params, timeout=60, verify=False
+        )
     if method == "post":
         response = requests.post(url, headers=headers, data=data, files=files)
     if method == "put":
@@ -178,28 +180,58 @@ def delete(token=None):
     return response
 
 
+# /user/password_reset/ ----------------------------
+def password_reset(email=None):
+    url_view = "user/password_reset/"
+    if not email:
+        email = input("Введите email пользователя = ")
+    data = {
+        "email": email,
+    }
+    response, json_status = base_request(url_view=url_view, method="post", data=data)
+
+
+# /user/password_reset/confirm/ ----------------------------
+def password_reset_confirm(token=None, password=None):
+    url_view = "user/password_reset/confirm/"
+    if not token:
+        token = input("Введите token = ")
+    if not password:
+        password = input("Введите password = ")
+    data = {
+        "token": token,
+        "password": password,
+    }
+    response, json_status = base_request(url_view=url_view, method="post", data=data)
+
+
 # ------------------------------------
 # UPLOAD FILE
-url_list = ['disk', 'db']
-url_store = f'file/{url_list[1]}/'
+
 
 # file/upload/
 def upload(token=None):
-    url_view = "upload/"
-    url_view = url_store + url_view
+    url_view = f"file/upload/"
     if not token:
         token = input("Введите token пользователя = ")
     headers = get_headers(token=token)
-
+    # data = {'file_store': 'db', 'sync_mode': False}
+    data = None
     uploaded_file_time = str(datetime.now())
-    uploaded_file_name = f'test_{uploaded_file_time[:19]}_uploaded_file.txt'
-    with NamedTemporaryFile("w+b", prefix="uploaded_file_name", suffix="uploaded_file_ext") as f:
-        f.write(f'<begin - {uploaded_file_time} - end>'.encode())
+    uploaded_file_name = f"test_{uploaded_file_time[:19]}_uploaded_file.txt"
+    with NamedTemporaryFile(
+        "w+b", prefix="uploaded_file_name", suffix="uploaded_file_ext"
+    ) as f:
+        f.write(f"<begin - {uploaded_file_time} - end>".encode())
         f.seek(0)
         files = {"file": (uploaded_file_name, f, "text/x-spam")}
         try:
             response, json_status = base_request(
-                url_view=url_view, method="post", headers=headers, files=files
+                url_view=url_view,
+                method="post",
+                headers=headers,
+                files=files,
+                data=data,
             )
             return response
         except Exception as e:
@@ -207,9 +239,11 @@ def upload(token=None):
 
 
 # file/download/
-def download(token=None, file_id=None):
-    url_view = "download/"
-    url_view = url_store + url_view
+def download(
+    token=None,
+    file_id=None,
+):
+    url_view = "file/download/"
     if not token:
         token = input("Введите token пользователя = ")
     if not file_id:
@@ -224,21 +258,19 @@ def download(token=None, file_id=None):
         headers=headers,
         params=params,
     )
-    print(type(response))
-    print(response.text)
-    print(response.content)
     if response.status_code == 200:
-        downloaded_file_name = f'test_{response.text[9:28]}_download_file.txt'
+        downloaded_file_name = f"test_{response.text[9:28]}_download_file.txt"
         CURR_DIR = os.path.dirname(os.path.realpath(__file__))
         downloaded_file = os.path.join(CURR_DIR, downloaded_file_name)
-        with open(downloaded_file, 'wb+') as f:
+        with open(downloaded_file, "wb+") as f:
             f.write(response.content)
-        print('File downloaded:')
-        with open(downloaded_file, 'rb') as f:
+        print("File downloaded:")
+        with open(downloaded_file, "rb") as f:
             print(f.read())
         time.sleep(10)
-        os.remove(downloaded_file)
-        print('File deleted')
+        if input("Удалить скаченный файл? Y: "):
+            os.remove(downloaded_file)
+            print("File deleted")
     else:
         return response
 
@@ -285,8 +317,6 @@ def file_delete(token=None, file_id=None):
     return response
 
 
-
-
 # celery tesk status-----------------------
 def celery_status(task_id=None):
     url_view = "celery_status/"
@@ -294,7 +324,7 @@ def celery_status(task_id=None):
         task_id = input("Введите task_id = ")
     if task_id:
         celery_status = "-"
-        while celery_status != 'SUCCESS':
+        while celery_status != "SUCCESS":
             #  or celery_status != 'FAILURE'
             response, json_status = base_request(
                 url_view=url_view, method="get", params={"task_id": task_id}
@@ -308,32 +338,7 @@ def celery_status(task_id=None):
         return celery_status, file
 
 
-# /user/password_reset/ ----------------------------
-def password_reset(email=None):
-    url_view = "user/password_reset/"
-    if not email:
-        email = input("Введите email пользователя = ")
-    data = {
-        "email": email,
-    }
-    response, json_status = base_request(url_view=url_view, method="post", data=data)
-
-
-# /user/password_reset/confirm/ ----------------------------
-def password_reset_confirm(token=None, password=None):
-    url_view = "user/password_reset/confirm/"
-    if not token:
-        token = input("Введите token = ")
-    if not password:
-        password = input("Введите password = ")
-    data = {
-        "token": token,
-        "password": password,
-    }
-    response, json_status = base_request(url_view=url_view, method="post", data=data)
-
-
-def api_test(token=None):
+def api_test(token=None, url_store="disk"):
     a = None
     a = input(
         "Регистрация - 1, Подтверждение почты - 2, Логин - 3\
@@ -427,7 +432,7 @@ def api_test(token=None):
     elif a == "11":
         password_reset()
         password_reset_confirm()
-    elif a == "22":
+    elif a == "20":
         email = input("Введите {адрес} @mail.ru: ")
         email = email + "@mail.ru"
         password = f"Password_{email}"
@@ -436,54 +441,40 @@ def api_test(token=None):
         token = login(email=email)
         print(f"{token=}")
         print("Загрузка файла.")
-        input("Do?")
-        file_id = upload(token=token).json()["File_id"]
+        file_id = upload(token=token, url_store=url_store).json()["File_id"]
         print(f"{file_id=}")
         print(f"Обработка файла с id - {file_id}.")
-        input("Do?")
         task_id = processing(token=token, file_id=file_id)
         print(task_id.json())
         task_id = task_id.json()["Task_id"]
         print(f"Запрос таски - {task_id}.")
-        input("Do?")
         print(celery_status(task_id=task_id))
         print(f"Скачивание файла с id - {file_id}.")
-        input("Do?")
-        download(token=token, file_id=file_id)
+        download(
+            token=token,
+            file_id=file_id,
+        )
+        input("Удаление файла и пользователя.")
+        print(f"Удаление файла с id - {file_id}.")
+        file_delete(token=token, file_id=file_id)
         print(f"Удаление из базы пользователя.")
-        input("Do?")
         delete(token=token)
     elif a == "21":
+        print(f"Загрузка файла.")
         upload(token=token)
-    elif a == "20":
-        download(token=token)
-    elif a == "23":
-        print(upload(token=token))
-        task_id = processing(token=token).json()['Task_id']
-        print(task_id)
-        celery_status(task_id=task_id)
-        # download(token=token)
-    elif a == "24":
+    elif a == "22":
         print(f"Обработка файла.")
         file_id = input("file_id = ")
-        task_id = processing(token=token, file_id=file_id)
-        print(task_id)
-        # print(task_id.json())
-        # task_id = task_id.json()["Task_id"]
-        # print(f"Запрос таски - {task_id}.")
-        # input("Do?")
-        # print(celery_status(task_id=task_id))
-        # print(f"Скачивание файла с id - {file_id}.")
-        # input("Do?")
-        # download(token=token, file_id=file_id)
-        # print(f"Удаление из базы пользователя.")
-        # input("Do?")
-        # delete(token=token)
-    elif a == "25":
+        processing(token=token, file_id=file_id)
+    elif a == "23":
+        print(f"Скачивание файла.")
+        download(
+            token=token,
+        )
+    elif a == "24":
         print(f"Удаление файла.")
         file_id = input("file_id = ")
         file_delete(token=token, file_id=file_id)
-
 
     else:
         pass
@@ -491,10 +482,11 @@ def api_test(token=None):
 
 
 if __name__ == "__main__":
-    token = '21855aebd65f2a69e457874415ca4b1a620540aa'
+    token = "ba4297a4d75784ad33be83bc8cce611c57a776df"
+    # token = 'f4a6e87a879ec0edbabd04e9ad65099759b31151'
+    # url_list = ['disk', 'db']
+    # url_store = url_list[1]
     api_test(token=token)
 
     # curl --location --request POST 'http://localhost:8000/api/upload-file/' \
     # --form 'file=@"/path/to/yourfile.pdf"'
-
-
