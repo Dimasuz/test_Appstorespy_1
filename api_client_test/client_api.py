@@ -482,8 +482,8 @@ def api_test(token=None, url_store="disk"):
 
 
 if __name__ == "__main__":
-    token = "ba4297a4d75784ad33be83bc8cce611c57a776df"
-    # token = 'f4a6e87a879ec0edbabd04e9ad65099759b31151'
+    token = "e75ca28f8cea1e0de06ea1b358b392c7589e8a69"
+
     # url_list = ['disk', 'db']
     # url_store = url_list[1]
     api_test(token=token)

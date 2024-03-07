@@ -4,7 +4,6 @@ from regloginout.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    # contacts = ContactSerializer(read_only=True, many=True)
     class Meta:
         model = User
         fields = (

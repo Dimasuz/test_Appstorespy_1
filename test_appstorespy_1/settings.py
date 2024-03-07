@@ -205,7 +205,7 @@ REST_FRAMEWORK = {
     # 'DEFAULT_PERMISSION_CLASSES': (
     #     'rest_framework.permissions.IsAuthenticated',
     #     'rest_framework.permissions.IsAdminUser',
-    # ),
+    # ), # при установке этого параметра User не сохраняется
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
         # for auth0 api
@@ -249,16 +249,6 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SELERLIZER = "json"
-
-SPECTACULAR_SETTINGS = {
-    "TITLE": "Project Appstorespy API",
-    "DESCRIPTION": "Testing task for junior python dev",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
-    "SWAGGER_UI_DIST": "SIDECAR",  # shorthand to use the sidecar instead
-    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
-    "REDOC_DIST": "SIDECAR",
-}
 
 # for allauth
 AUTHENTICATION_BACKENDS = [
@@ -337,3 +327,87 @@ FILE_STORE = {
     "db": "FileInDb",
     "disk": "FileOnDisk",
 }
+
+# SPECTACULAR_SETTINGS = {
+#     "TITLE": "Project Appstorespy API",
+#     "DESCRIPTION": "Testing task for junior python dev",
+#     "VERSION": "1.0.0",
+#     "SERVE_INCLUDE_SCHEMA": False,
+#     "SWAGGER_UI_DIST": "SIDECAR",  # shorthand to use the sidecar instead
+#     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+#     "REDOC_DIST": "SIDECAR",
+# }
+
+
+SPECTACULAR_DEFAULTS = {
+    'SCHEMA_PATH_PREFIX': None,
+    'SCHEMA_PATH_PREFIX_TRIM': False,
+    'SCHEMA_PATH_PREFIX_INSERT': '',
+    'SCHEMA_COERCE_PATH_PK_SUFFIX': False,
+    'DEFAULT_GENERATOR_CLASS': 'drf_spectacular.generators.SchemaGenerator',
+    'COMPONENT_SPLIT_PATCH': True,
+    'COMPONENT_SPLIT_REQUEST': False,
+    'COMPONENT_NO_READ_ONLY_REQUIRED': False,
+    'ENFORCE_NON_BLANK_FIELDS': False,
+    'OAS_VERSION': '3.0.3',
+    'SERVE_URLCONF': None,
+    'SERVE_PUBLIC': True,
+    'SERVE_INCLUDE_SCHEMA': True,
+    # list of authentication/permission classes for spectacular's views.
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAuthenticated',
+                          'rest_framework.permissions.IsAdminUser',
+                          # 'rest_framework.permissions.AllowAny',
+    ],
+    'SERVE_AUTHENTICATION': None,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+    },
+    'SWAGGER_UI_OAUTH2_CONFIG': {},
+    'REDOC_UI_SETTINGS': {},
+    'SWAGGER_UI_DIST': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest',
+    'SWAGGER_UI_FAVICON_HREF': 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/favicon-32x32.png',
+    'REDOC_DIST': 'https://cdn.jsdelivr.net/npm/redoc@latest',
+    'APPEND_PATHS': {},
+    'APPEND_COMPONENTS': {},
+    'SECURITY': [],
+    'POSTPROCESSING_HOOKS': [
+        'drf_spectacular.hooks.postprocess_schema_enums'
+    ],
+    'PREPROCESSING_HOOKS': [],
+    'SORT_OPERATIONS': True,
+    'ENUM_NAME_OVERRIDES': {},
+    'ENUM_ADD_EXPLICIT_BLANK_NULL_CHOICE': True,
+    'ENUM_GENERATE_CHOICE_DESCRIPTION': True,
+    'ENUM_SUFFIX': 'Enum',
+    'GET_LIB_DOC_EXCLUDES': 'drf_spectacular.plumbing.get_lib_doc_excludes',
+    'GET_MOCK_REQUEST': 'drf_spectacular.plumbing.build_mock_request',
+    'CAMELIZE_NAMES': False,
+    'GENERIC_ADDITIONAL_PROPERTIES': 'dict',
+    'PATH_CONVERTER_OVERRIDES': {},
+    'SORT_OPERATION_PARAMETERS': True,
+    'ENABLE_LIST_MECHANICS_ON_NON_2XX': False,
+    "DEFAULT_QUERY_MANAGER": 'objects',
+    'AUTHENTICATION_WHITELIST': None,
+    'PARSER_WHITELIST': None,
+    'RENDERER_WHITELIST': None,
+    'DISABLE_ERRORS_AND_WARNINGS': False,
+    'ENABLE_DJANGO_DEPLOY_CHECK': True,
+    "TITLE": "Project Appstorespy API",
+    "DESCRIPTION": "Testing task for junior python dev",
+    'TOS': None,
+    'CONTACT': {},
+    'LICENSE': {},
+    'VERSION': '1.0.0',
+    'SERVERS': [],
+    'TAGS': [],
+    'WEBHOOKS': [],
+    'EXTERNAL_DOCS': {},
+    'EXTENSIONS_INFO': {},
+    'EXTENSIONS_ROOT': {},
+    'OAUTH2_FLOWS': [],
+    'OAUTH2_AUTHORIZATION_URL': None,
+    'OAUTH2_TOKEN_URL': None,
+    'OAUTH2_REFRESH_URL': None,
+    'OAUTH2_SCOPES': None,
+}
+

@@ -9,8 +9,8 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files import File
 from django.http import (FileResponse, JsonResponse, HttpResponse, StreamingHttpResponse)
-from drf_spectacular.utils import (OpenApiExample, OpenApiParameter, extend_schema)
-from rest_framework import status
+from drf_spectacular.utils import (OpenApiExample, OpenApiParameter, extend_schema, inline_serializer, OpenApiResponse)
+from rest_framework import status, serializers
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -25,7 +25,11 @@ from .serializers import (FileInDbSerializer, FileOnDiskSerializer, UploadFileSe
 
 @extend_schema(
     request=UploadFileSerializer,
-    responses={201: UploadFileSerializer},
+    responses={201: inline_serializer(
+            name="UploadFile",
+            fields={"Status": serializers.BooleanField(), "File_id": serializers.CharField(),},
+                    ),
+    },
 )
 class FileUploadAPIView(APIView):
     """Upload file"""
@@ -118,6 +122,7 @@ class FileUploadAPIView(APIView):
                     {"Status": True, "File_id": file_upload.pk}, status=201
                 )
             else:
+                file_upload.delete()
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         else:
@@ -129,12 +134,24 @@ class FileUploadAPIView(APIView):
                     {"Status": True, "File_id": file_upload.pk}, status=201
                 )
             else:
+                file_upload.delete()
                 return JsonResponse(uploaded_file, status=400)
 
 
+
 @extend_schema(
-    request=UploadFileSerializer,
-    responses={201: UploadFileSerializer},
+    parameters=[
+        OpenApiParameter(name="file_id", required=True, type=str),
+    ],
+    description="Download file with id",
+    responses={
+        (201, 'application/octet-stream'): inline_serializer(
+           name='FileDownloadResponse',
+           fields={
+               'file': serializers.FileField(),
+           },
+       ),
+    }
 )
 class FileDownloadAPIView(APIView):
     """
@@ -181,7 +198,7 @@ class FileDownloadAPIView(APIView):
 
                     response = FileResponse(
                         download_file.file,
-                        content_type="application/force-download",
+                        content_type="application/octet-stream",
                         as_attachment=True,
                     )
                     response["Content-Disposition"] = (
@@ -192,8 +209,6 @@ class FileDownloadAPIView(APIView):
 
                 elif uploaded_file.file_store == "disk":
                     download_file = FileOnDisk.objects.get(file_id=uploaded_file).file
-                    # download_file = os.path.join(settings.FILES_UPLOADED, uploaded_file.file_name)
-                    # download_file_path = download_file.file
 
                     if os.path.exists(download_file):
                         return FileResponse(
@@ -203,17 +218,17 @@ class FileDownloadAPIView(APIView):
                         )
                     else:
                         return JsonResponse(
-                            {"Status": False, "Error": "File not found"}, status=400
+                            {"Status": False, "Error": "File not found"}, status=404
                         )
 
                 else:
                     return JsonResponse(
-                        {"Status": False, "Error": "File not found."}, status=403
+                        {"Status": False, "Error": "File not found."}, status=404
                     )
 
             except ObjectDoesNotExist as ex:
                 return JsonResponse(
-                    {"Status": False, "Error": "File not found."}, status=403
+                    {"Status": False, "Error": "File not found."}, status=404
                 )
 
         return JsonResponse(
@@ -222,8 +237,19 @@ class FileDownloadAPIView(APIView):
 
 
 @extend_schema(
-    request=UploadFileSerializer,
-    responses={201: UploadFileSerializer},
+    parameters=[
+        OpenApiParameter(name="file_id", required=True, type=str),
+    ],
+    description="Pricessing file with id",
+    responses={
+        (201, 'application/json'): inline_serializer(
+           name='FileProcessingResponse',
+           fields={
+                "Status": serializers.BooleanField(),
+                "Task_id": serializers.CharField(),
+           },
+       ),
+    },
 )
 class FileProcessingAPIView(APIView):
     """
@@ -249,7 +275,7 @@ class FileProcessingAPIView(APIView):
                 uploaded_file = UploadFile.objects.get(pk=file_id)
             except ObjectDoesNotExist as ex:
                 return JsonResponse(
-                    {"Status": False, "Error": "File not found."}, status=403
+                    {"Status": False, "Error": "File not found."}, status=404
                 )
 
             if uploaded_file.user != request.user:
@@ -300,8 +326,16 @@ class CeleryStatus(APIView):
 
 
 @extend_schema(
-    request=UploadFileSerializer,
-    responses={200: UploadFileSerializer},
+    parameters=[OpenApiParameter(name="file_id", required=True, type=str),],
+    description="Delete file with id",
+    responses={(200, 'application/json'): inline_serializer(
+            name='FileDeleteResponse',
+            fields={
+                'Status': serializers.BooleanField(),
+                'Files_deleted': serializers.IntegerField(),
+                }
+            ),
+    }
 )
 class FileDeleteAPIView(APIView):
     """DELETE"""
@@ -318,13 +352,6 @@ class FileDeleteAPIView(APIView):
 
         if file_id is not None:
 
-            # try:
-            #     uploaded_file = UploadFile.objects.get(pk=file_id)
-            # except ObjectDoesNotExist as ex:
-            #     return JsonResponse(
-            #         {"Status": False, "Error": "File not found."}, status=403
-            #     )
-
             try:
                 uploaded_file = UploadFile.objects.get(pk=file_id)
                 if uploaded_file.file_store == "db":
@@ -337,7 +364,7 @@ class FileDeleteAPIView(APIView):
                     file_path = None
             except ObjectDoesNotExist as ex:
                 return JsonResponse(
-                    {"Status": False, "Error": "File not found."}, status=403
+                    {"Status": False, "Error": "File not found."}, status=404
                 )
 
             if uploaded_file.user == request.user:
