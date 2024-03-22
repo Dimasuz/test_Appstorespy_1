@@ -1,5 +1,6 @@
 import os
 import uuid
+import random
 from datetime import datetime
 
 import pytest
@@ -13,6 +14,14 @@ from regloginout.models import ConfirmEmailToken, User
 
 URL_BASE = "http://127.0.0.1:8000/api/v1/"
 
+def get_password(n):
+    pas = random.choice(list('ABCDEFGHIGKLMNOPQRSTUVYXWZ'))
+    pas = pas + random.choice(list('abcdefghigklmnopqrstuvyxwz'))
+    pas = pas + random.choice(list('1234567890'))
+    pas = pas + random.choice(list('`~!@#$%^&*()_-+={[}]:;",<.>?'))
+    for x in range(n-4):
+        pas = pas + random.choice(list('1234567890abcdefghigklmnopqrstuvyxwzABCDEFGHIGKLMNOPQRSTUVYXWZ`~!@#$%^&*()_-+={[}]:;",<.>?'))
+    return pas
 
 # фикстура для api-client
 @pytest.fixture
@@ -29,7 +38,7 @@ def register_user(api_client):
     url = URL_BASE + url_view
     num = str(uuid.uuid4())
     email = f"email_{num}@mail.ru"
-    password = f"Password_{num}"
+    password = get_password(16)
     data = {
         "first_name": f"first_name_{num}",
         "last_name": f"last_name_{num}",
@@ -100,7 +109,7 @@ def tmp_file(tmp_path, request):
     file_name = os.path.join(tmp_path, f"{file_name}.{file_ext}")
     with open(file_name, "w+") as file:
         # file.write(io.BytesIO(b"some initial text data"))
-        file.write(f"test_file path {file_name}")
+        file.write(f"pytest_file path {file_name}")
     return file_name
 
 

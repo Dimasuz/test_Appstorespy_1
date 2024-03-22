@@ -9,7 +9,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.http import JsonResponse
 
 from test_appstorespy_1.celery import app
-from uploader.models import FileInDb, FileOnDisk, UploadFile
+from uploader.models import UploadFile
 
 
 # формирование и отправка писем для применения в celery
@@ -31,24 +31,12 @@ def send_email(email, title, massage):
 
 # task for processing file
 @app.task
-def processing_file(file_id):
+def processing_file(file_path):
 
-    try:
-        uploaded_file = UploadFile.objects.get(pk=file_id)
-        if uploaded_file.file_store == "db":
-            file = FileInDb.objects.get(file_id=uploaded_file)
-            file_path = file.file.path
-        elif uploaded_file.file_store == "disk":
-            file = FileOnDisk.objects.get(file_id=uploaded_file)
-            file_path = file.file
-        else:
-            file_path = None
-    except ObjectDoesNotExist as ex:
-        return JsonResponse({"Status": False, "Error": "File not found."}, status=403)
+    time.sleep(10)
 
-    if file_path:
-        with open(file_path, "rb+") as f:
-            f.seek(0, 2)
-            f.write(f"\ncelery_{datetime.now()}".encode())
+    with open(file_path, "rb+") as f:
+        f.seek(0, 2)
+        f.write(f"\ncelery_{datetime.now()}".encode())
 
     return file_path

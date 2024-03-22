@@ -116,18 +116,15 @@ WSGI_APPLICATION = "test_appstorespy_1.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DB_SQLITE = "sqlite"
-DB_POSTGRESQL = "postgresql"
-
 DATABASES_ALL = {
-    DB_SQLITE: {
+    "sqlite": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
         "OPTIONS": {
             "timeout": 20,
         },
     },
-    DB_POSTGRESQL: {
+    "postgresql": {
         "ENGINE": "django.db.backends.postgresql",
         "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "NAME": os.environ.get("POSTGRES_NAME", "postgres"),
@@ -135,10 +132,10 @@ DATABASES_ALL = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "password"),
         "PORT": int(os.environ.get("POSTGRES_PORT", "5432")),
     },
-    # 'MONGO_DB': {
+    # "mongo": {
     #         'ENGINE': 'djongo',
     #         'NAME': 'mongo_db',
-    #         # 'ENFORCE_SCHEMA': False,
+    #         'ENFORCE_SCHEMA': False,
     #         'CLIENT': {
     #             # 'host': 'mongodb+srv://ddd:123@127.0.0.1:27017/files?authSource=admin',
     #             'host': 'mongodb://ddd:123@127.0.0.1:27017/files?authSource=admin',
@@ -147,10 +144,11 @@ DATABASES_ALL = {
 }
 
 DATABASES = {
-    "default": DATABASES_ALL[os.environ.get("DJANGO_DB", DB_SQLITE)],
-    # 'mongo_db': DATABASES_ALL['MONGO_DB']
+    'default': DATABASES_ALL[os.environ.get("DB_DEFAULT", "sqlite")],
+    'db_uploader': DATABASES_ALL[os.environ.get("DB_UPLOADER", "sqlite")],
 }
 
+DATABASE_ROUTERS = ["uploader.dbrouters.UploaderRouter",]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -202,10 +200,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "regloginout.User"
 
 REST_FRAMEWORK = {
-    # 'DEFAULT_PERMISSION_CLASSES': (
-    #     'rest_framework.permissions.IsAuthenticated',
-    #     'rest_framework.permissions.IsAdminUser',
-    # ), # при установке этого параметра User не сохраняется
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
         # for auth0 api

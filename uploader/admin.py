@@ -1,28 +1,14 @@
 from django.contrib import admin
 
-from .models import FileInDb, FileOnDisk, UploadFile
-
-
-class FileInDbInline(admin.TabularInline):
-    model = FileInDb
+from .models import UploadFile
 
 
 # admin.site.register(UploadFile)
 @admin.register(UploadFile)
 class UploadFileAdmin(admin.ModelAdmin):
     list_display = (
-        "file_store",
-        "file_name",
-        "uploaded_on",
+        "pk",
+        "file",
         "user",
+        "uploaded_on",
     )
-    inlines = [FileInDbInline]
-
-
-admin.site.register(FileInDb)
-# @admin.register(FileInDefDb)
-# class FileInDefDbAdmin(admin.ModelAdmin):
-#     list_display = ('file', 'file_id',)
-
-
-admin.site.register(FileOnDisk)

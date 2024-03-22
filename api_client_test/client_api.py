@@ -147,7 +147,10 @@ def details_post(token=None, **kwargs):
         token = input("Введите token пользователя = ")
     headers = get_headers(token=token)
     response, json_status = base_request(
-        url_view=url_view, method="post", data=kwargs, headers=headers
+        url_view=url_view,
+        method="post",
+        data=kwargs,
+        headers=headers
     )
     return response
 
@@ -210,19 +213,17 @@ def password_reset_confirm(token=None, password=None):
 
 
 # file/upload/
-def upload(token=None):
-    url_view = f"file/upload/"
+def upload(token=None, data=None):
+    url_view = f"file/"
     if not token:
         token = input("Введите token пользователя = ")
     headers = get_headers(token=token)
-    # data = {'file_store': 'db', 'sync_mode': False}
-    data = None
     uploaded_file_time = str(datetime.now())
     uploaded_file_name = f"test_{uploaded_file_time[:19]}_uploaded_file.txt"
     with NamedTemporaryFile(
         "w+b", prefix="uploaded_file_name", suffix="uploaded_file_ext"
     ) as f:
-        f.write(f"<begin - {uploaded_file_time} - end>".encode())
+        f.write(f"<begin - client_api_test - {uploaded_file_time} - end>".encode())
         f.seek(0)
         files = {"file": (uploaded_file_name, f, "text/x-spam")}
         try:
@@ -243,7 +244,7 @@ def download(
     token=None,
     file_id=None,
 ):
-    url_view = "file/download/"
+    url_view = "file/"
     if not token:
         token = input("Введите token пользователя = ")
     if not file_id:
@@ -277,7 +278,7 @@ def download(
 
 # file/processing/
 def processing(token=None, file_id=None):
-    url_view = "file/processing/"
+    url_view = "file/"
     if not token:
         token = input("Введите token пользователя = ")
     if not file_id:
@@ -298,7 +299,7 @@ def processing(token=None, file_id=None):
 
 # file/delete/
 def file_delete(token=None, file_id=None):
-    url_view = "file/delete/"
+    url_view = "file/"
     if not token:
         token = input("Введите token пользователя = ")
     if not file_id:
@@ -339,142 +340,157 @@ def celery_status(task_id=None):
 
 
 def api_test(token=None, url_store="disk"):
-    a = None
-    a = input(
-        "Регистрация - 1, Подтверждение почты - 2, Логин - 3\
-    , Логаут - 4, Удалить пользователя - 5 \n Смена пароля - 11\ "
-        "\nДетали пользователя (получить) - 6, Детали пользователя (изменить) - 7, \nзагрузка файла - 22, загрузка файла с id - 21 или запрос таски - 8 : "
-    )
-    # регистраиця нового пользователя
-    if a == "0":
-        # num = time.time()
-        # email = str(uuid.uuid4())
-        email = input("Введите {адрес} @mail.ru: ")
-        email = email + "@mail.ru"
-        password = f"Password_{email}"
-        _, token = user_register(email=email, password=password)
-        confirm(email=email, token=token)
-        token = login(email=email)
-        logout(token)
-        token = login(email=email)
-        delete(token)
+    a = input("1 - операции с пользователями, \n2 - операции с файлами\n: ")
+    if a == '1':
+        a = input(
+                "1 - user registration,\n2 - email confirm,\n3 - login,\n4 - logout,\n"
+                "5 - delete user,\n6 - user deteils get,\n7 - user deteils change,\n"
+                "8 - task get,\n11 - reset password\n: ")
+        # регистраиця нового пользователя
+        if a == "0":
+            email = str(uuid.uuid4())
+            email = email + "@mail.ru"
+            password = f"Password_{email}"
+            _, token = user_register(email=email, password=password)
+            confirm(email=email, token=token)
+            token = login(email=email)
+            if input('Continue with logout/delete? Y: '):
+                logout(token)
+                token = login(email=email)
+                delete(token)
 
-    elif a == "1":
-        email = input("Введите {адрес} @mail.ru: ")
-        email = email + "@mail.ru"
-        password = f"Password_{email}"
-        response = user_register(email=email, password=password)
-        celery = input("Запросить очередь celery? ")
-        if celery:
-            celery_status(response["task_id"])
-        else:
-            return
-    # подтверждение почты нового пользователя
-    elif a == "2":
-        email = input("Введите {адрес} @mail.ru: ")
-        email = email + "@mail.ru"
-        confirm(email=email)
-    # вход в систему
-    elif a == "3":
-        email = input("Введите {адрес} @mail.ru: ")
-        email = email + "@mail.ru"
-        if input("Стандартный пароль? Y "):
-            login(email=email)
-        else:
-            password = input("Введите пароль: ")
-            login(email=email, password=password)
-    # выход из системы
-    elif a == "4":
-        logout()
-    # удаление пользователя
-    elif a == "5":
-        delete()
+        elif a == "1":
+            email = input("Введите {адрес} @mail.ru: ")
+            email = email + "@mail.ru"
+            password = f"Password_{email}"
+            response = user_register(email=email, password=password)
+            celery = input("Запросить очередь celery? ")
+            if celery:
+                celery_status(response["task_id"])
+            else:
+                return
+        # подтверждение почты нового пользователя
+        elif a == "2":
+            email = input("Введите {адрес} @mail.ru: ")
+            email = email + "@mail.ru"
+            confirm(email=email)
+        # вход в систему
+        elif a == "3":
+            email = input("Введите {адрес} @mail.ru: ")
+            email = email + "@mail.ru"
+            if input("Стандартный пароль? Y "):
+                login(email=email)
+            else:
+                password = input("Введите пароль: ")
+                login(email=email, password=password)
+        # выход из системы
+        elif a == "4":
+            logout()
+        # удаление пользователя
+        elif a == "5":
+            delete()
 
-    # запрос данных пользователя
-    elif a == "6":
-        email = input("Введите {адрес} @mail.ru: ")
-        email = email + "@mail.ru"
-        token = login(email=email)
-        details_get(token)
-    # изменение данных пользователя
-    elif a == "7":
-        email = input("Введите {адрес} @mail.ru: ")
-        email = email + "@mail.ru"
-        print("Входим в систему.")
-        token = login(email=email)
-        print('Меняем данные пользователя добавив "_new".')
-        password_new = f"Password_{email}_new"
-        # password_new = 'new'
-        data = {
-            "first_name": f"first_name_{email}_new",
-            "last_name": f"last_name_6021185@mail.ru{email}_new",
-            "password": password_new,
-        }
-        details_post(token, **data)
-        details_get(token)
-        print("Выходим из системы")
-        logout()
-        if input("Меняем данные пользователя обратно? Y "):
+        # запрос данных пользователя
+        elif a == "6":
+            email = input("Введите {адрес} @mail.ru: ")
+            email = email + "@mail.ru"
+            # token = login(email=email)
+            # details_get(token)
+            details_get()
+        # изменение данных пользователя
+        elif a == "7":
+            email = input("Введите {адрес} @mail.ru: ")
+            email = email + "@mail.ru"
             print("Входим в систему.")
-            token = login(email=email, password=password_new)
+            token = login(email=email)
+            print('Меняем данные пользователя добавив "_new".')
+            password_new = f"Password_{email}_new"
+            # password_new = 'new'
             data = {
-                "first_name": f"first_name_{email}",
-                "last_name": f"last_name_{email}",
-                "password": f"Password_{email}",
+                "first_name": f"first_name_{email}_new",
+                "last_name": f"last_name_6021185@mail.ru{email}_new",
+                "password": password_new,
             }
             details_post(token, **data)
             details_get(token)
             print("Выходим из системы")
-            logout(token)
-    # запрос таски
-    elif a == "8":
-        celery_status()
-    elif a == "11":
-        password_reset()
-        password_reset_confirm()
-    elif a == "20":
-        email = input("Введите {адрес} @mail.ru: ")
-        email = email + "@mail.ru"
-        password = f"Password_{email}"
-        _, token = user_register(email=email, password=password)
-        confirm(email=email, token=token)
-        token = login(email=email)
-        print(f"{token=}")
-        print("Загрузка файла.")
-        file_id = upload(token=token, url_store=url_store).json()["File_id"]
-        print(f"{file_id=}")
-        print(f"Обработка файла с id - {file_id}.")
-        task_id = processing(token=token, file_id=file_id)
-        print(task_id.json())
-        task_id = task_id.json()["Task_id"]
-        print(f"Запрос таски - {task_id}.")
-        print(celery_status(task_id=task_id))
-        print(f"Скачивание файла с id - {file_id}.")
-        download(
-            token=token,
-            file_id=file_id,
-        )
-        input("Удаление файла и пользователя.")
-        print(f"Удаление файла с id - {file_id}.")
-        file_delete(token=token, file_id=file_id)
-        print(f"Удаление из базы пользователя.")
-        delete(token=token)
-    elif a == "21":
-        print(f"Загрузка файла.")
-        upload(token=token)
-    elif a == "22":
-        print(f"Обработка файла.")
-        file_id = input("file_id = ")
-        processing(token=token, file_id=file_id)
-    elif a == "23":
-        print(f"Скачивание файла.")
-        download(
-            token=token,
-        )
-    elif a == "24":
-        print(f"Удаление файла.")
-        file_id = input("file_id = ")
-        file_delete(token=token, file_id=file_id)
+            logout()
+            if input("Меняем данные пользователя обратно? Y "):
+                print("Входим в систему.")
+                token = login(email=email, password=password_new)
+                data = {
+                    "first_name": f"first_name_{email}",
+                    "last_name": f"last_name_{email}",
+                    "password": f"Password_{email}",
+                }
+                details_post(token, **data)
+                details_get(token)
+                print("Выходим из системы")
+                logout(token)
+        # запрос таски
+        elif a == "8":
+            celery_status()
+        elif a == "11":
+            password_reset()
+            password_reset_confirm()
+    elif a == '2':
+        a = input(
+            "0 - file upload, processing, get task, download and all delete,\n"
+            "1 - file upload,\n2 - file processing,\n3 - file download,\n4 - file delete,\n: ")
+
+        if a == "0":
+            # email = input("Введите {адрес} @mail.ru: ")
+            email = str(uuid.uuid4()) + "@mail.ru"
+            print(f'email пользователя - {email}')
+            password = f"Password_{email}"
+            _, token = user_register(email=email, password=password)
+            confirm(email=email, token=token)
+            token = login(email=email)
+            print(f"{token=}")
+            print("Загрузка файла.")
+            file_id = upload(token=token).json()["File_id"]
+            print(f"{file_id=}")
+            print(f"Скачивание файла с id - {file_id}.")
+            download(
+                token=token,
+                file_id=file_id,
+            )
+            print(f"Обработка файла с id - {file_id}.")
+            task_id = processing(token=token, file_id=file_id)
+            print(task_id.json())
+            task_id = task_id.json()["Task_id"]
+            print(f"Запрос таски - {task_id}.")
+            print(celery_status(task_id=task_id))
+            print(f"Скачивание файла с id - {file_id}.")
+            download(
+                token=token,
+                file_id=file_id,
+            )
+            input("Удаление файла и пользователя.")
+            print(f"Удаление файла с id - {file_id}.")
+            file_delete(token=token, file_id=file_id)
+            print(f"Удаление из базы пользователя.")
+            delete(token=token)
+        elif a == "1":
+            print(f"Загрузка файла.")
+            # data = {'sync_mode': True}
+            # upload(token=token, data=data)
+            upload(token=token)
+        elif a == "2":
+            print(f"Обработка файла.")
+            file_id = input("file_id = ")
+            responce = processing(token=token, file_id=file_id)
+            if input('Get celery task result? y'):
+                celery_status(responce.json()['Task_id'])
+        elif a == "3":
+            print(f"Скачивание файла.")
+            download(
+                token=token,
+            )
+        elif a == "4":
+            print(f"Удаление файла.")
+            file_id = input("file_id = ")
+            file_delete(token=token, file_id=file_id)
 
     else:
         pass
@@ -482,7 +498,7 @@ def api_test(token=None, url_store="disk"):
 
 
 if __name__ == "__main__":
-    token = "e75ca28f8cea1e0de06ea1b358b392c7589e8a69"
+    token = "1a9f43d1c7766238f39ce870fc332cb469f541e3"
 
     # url_list = ['disk', 'db']
     # url_store = url_list[1]
