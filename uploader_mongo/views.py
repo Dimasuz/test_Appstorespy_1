@@ -1,50 +1,49 @@
 import asyncio
-import os.path
-from contextlib import suppress
 from datetime import datetime, timedelta
 
 from celery.result import AsyncResult
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import (FileResponse, JsonResponse, HttpResponse, StreamingHttpResponse)
 from drf_spectacular.utils import (OpenApiExample, OpenApiParameter, extend_schema, inline_serializer, OpenApiResponse)
-from rest_framework import status, serializers
+from asgiref.sync import sync_to_async
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
 from rest_framework.views import APIView
+from mongoengine import DoesNotExist, ValidationError
 
+from test_appstorespy_1 import settings
+from .models import UploadFileMongo
 from regloginout.models import User
 from test_appstorespy_1.settings import MAX_TIME_UPLOAD_FILE
-from test_appstorespy_1.tasks import processing_file
-
-from .models import UploadFile
-from .serializers import UploadFileSerializer
+from test_appstorespy_1.tasks import processing_file, processing_file_mongo
 
 
-@extend_schema(
-    request=UploadFileSerializer,
-    responses={201: inline_serializer(
-            name="UploadFile",
-            fields={"Status": serializers.BooleanField(), "File_id": serializers.CharField(),},
-                    ),
-    },
-)
-class FileUploadAPIView(APIView):
+# @extend_schema(
+#     request=UploadFileSerializer,
+#     responses={201: inline_serializer(
+#             name="UploadFileMongo",
+#             fields={"Status": serializers.BooleanField(), "File_id": serializers.CharField(),},
+#                     ),
+#     },
+# )
+class FileUploadMongoAPIView(APIView):
     """Upload file"""
 
     parser_classes = (MultiPartParser, FormParser)
-    serializer_classe = UploadFileSerializer
 
     # Upload file by method POST
     """POST"""
 
-    async def upladed_file_save(self, request):
-        file_upload = UploadFile(user=request.data["user"], file=request.FILES["file"])
-        await file_upload.asave()
-        return file_upload.pk
+    async def uploaded_file_save(self, request):
+        file = request.FILES["file"]
+        file_upload = UploadFileMongo(user=request.user.pk, )
+        file_upload.file.put(file.file, content_type=file.content_type, filename=file.name,)
+
+        await sync_to_async(file_upload.asave(), thread_sensitive=False)
+        return str(file_upload.id)
 
     async def handle_uploaded_file(self, request):
-        task = asyncio.create_task(self.upladed_file_save(request))
+        task = asyncio.create_task(self.uploaded_file_save(request))
         upload_file = await task
         # ограничим время загрузки файла
         stop_time = datetime.now() + timedelta(minutes=int(MAX_TIME_UPLOAD_FILE))
@@ -72,23 +71,21 @@ class FileUploadAPIView(APIView):
                 {"Status": False, "Error": 'There is no "file" in the request.'},
                 status=400,
             )
-        request.data["user"] = request.user.pk
-        serializer = self.serializer_classe(data=request.data)
-        if serializer.is_valid():
-            if request.data.get("sync_mode", False):
-                file_upload = serializer.save()
+
+        if request.data.get("sync_mode", False):
+                file_upload = UploadFileMongo(user=request.user.pk,)
+                file_upload.file.put(file.file, content_type=file.content_type, filename=file.name,)
+                file_upload.save()
                 return JsonResponse(
-                    {"Status": True, "File_id": file_upload.pk}, status=201
+                    {"Status": True, "File_id": str(file_upload.id)}, status=201
                 )
-            else:
-                # async upload
-                uploaded_file = asyncio.run(self.handle_uploaded_file(request))
-                if uploaded_file["Status"]:
-                    return JsonResponse(uploaded_file, status=201,)
-                else:
-                    return JsonResponse(uploaded_file, status=400)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # async upload
+            uploaded_file = asyncio.run(self.handle_uploaded_file(request))
+            if uploaded_file["Status"]:
+                return JsonResponse(uploaded_file, status=201,)
+            else:
+                return JsonResponse(uploaded_file, status=400)
 
 
     def check_user_file_id(self, request, *args, **kwargs):
@@ -105,15 +102,26 @@ class FileUploadAPIView(APIView):
 
         if file_id:
             try:
-                file = UploadFile.objects.get(pk=file_id)
-                user = User.objects.get(pk=file.user)
-            except ObjectDoesNotExist as ex:
+                file = UploadFileMongo.objects.get(pk=file_id)
+            except DoesNotExist as ex:
                 return JsonResponse(
-                    {"Status": False, "Error": "File not found."}, status=404
+                    {"Status": False, "Error": 'File not found.'}, status=404
                 )
+            except ValidationError as ex:
+                return JsonResponse(
+                    {"Status": False, "Error": 'File_id must be a 12-byte input or a 24-character hex string.'}, status=404
+                )
+
         else:
             return JsonResponse(
                 {"Status": False, "Error": "file_id is required"}, status=400
+            )
+
+        try:
+            user = User.objects.get(pk=file.user)
+        except ObjectDoesNotExist as ex:
+            return JsonResponse(
+                {"Status": False, "Error": "User not found."}, status=404
             )
 
         if user != request.user:
@@ -130,24 +138,29 @@ class FileUploadAPIView(APIView):
     def get(self, request, *args, **kwargs):
 
         download_file = self.check_user_file_id(request)
-        if not isinstance(download_file, UploadFile):
+
+        if not isinstance(download_file, UploadFileMongo):
             return download_file
 
+        # file = download_file.file
         response = FileResponse(
             download_file.file,
+            filename=download_file.file.filename,
             content_type="application/octet-stream",
             as_attachment=True,
         )
-        response["Content-Disposition"] = (
-            f'attachment; filename="{download_file.file.name}"'
-        )
+        # response["Content-Disposition"] = (
+        #     f'attachment; filename="{download_file.file.filename}"'
+        #     # f'attachment; filename="{download_file.file.filename}"'
+        # )
 
+        # could be used also
         # response = HttpResponse(download_file.file,
         #                         # content_type="text/csv",
         #                         # headers={"Content-Disposition": f'attachment;
         #                                    filename={file_name}'},
         #                         )
-
+        # or
         # response = StreamingHttpResponse(download_file.file,
         #                           content_type="text/csv",
         #                           headers={"Content-Disposition": f'attachment;
@@ -161,19 +174,15 @@ class FileUploadAPIView(APIView):
     def delete(self, request, *args, **kwargs):
 
         uploaded_file = self.check_user_file_id(request)
-        if not isinstance(uploaded_file, UploadFile):
+
+        if not isinstance(uploaded_file, UploadFileMongo):
             return uploaded_file
 
-        file_path = uploaded_file.file.path
-        file_deleted = uploaded_file.delete()
-        if os.path.exists(file_path):
-            with suppress(OSError):
-                os.remove(file_path)
+        uploaded_file.delete()
 
         return JsonResponse(
             {
                 "Status": True,
-                "Files_deleted": file_deleted[1]["uploader.UploadFile"],
             },
             status=200,
         )
@@ -184,24 +193,20 @@ class FileUploadAPIView(APIView):
     def put(self, request, *args, **kwargs):
 
         uploaded_file = self.check_user_file_id(request)
-        if not isinstance(uploaded_file, UploadFile):
-            return uploaded_file
 
-        file_path = uploaded_file.file.path
+        if isinstance(uploaded_file, UploadFileMongo):
 
-        if os.path.exists(file_path):
             # processing by Celery
-            async_result = processing_file.delay(file_path)
+            async_result = processing_file_mongo.delay(str(uploaded_file.id))
+            return JsonResponse(
+                {
+                    "Status": True,
+                    "Task_id": async_result.task_id,
+                },
+                status=201,
+            )
         else:
-            return JsonResponse({"Status": False, "Error": "File not found."}, status=404)
-
-        return JsonResponse(
-            {
-                "Status": True,
-                "Task_id": async_result.task_id,
-            },
-            status=201,
-        )
+            return uploaded_file
 
 
 class CeleryStatus(APIView):

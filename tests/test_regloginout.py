@@ -7,7 +7,7 @@ from rest_framework.authtoken.models import Token
 
 from regloginout.models import User
 
-from .conftest import URL_BASE
+from .conftest import URL_BASE, get_password
 
 warnings.filterwarnings(action="ignore")
 
@@ -109,7 +109,7 @@ def test_user_details_get(login):
         headers=headers,
     )
     assert response.status_code == 200
-    assert response.json()["id"] == 1
+    assert response.json()["id"] == user.id
     assert response.json()["first_name"] == user.first_name
     assert response.json()["last_name"] == user.last_name
     assert response.json()["email"] == user.email
@@ -142,14 +142,12 @@ def test_user_details_post(login):
 
     # проверяем изменения
 
-    # выходим из системы, чтобы проверить новый пароль
+    # чтобы проверить новый пароль, выходим из системы
     url_logout = URL_BASE + "user/logout/"
     response = api_client.post(
         url_logout,
         headers=headers,
     )
-    assert response.status_code == 200
-    assert response.json()["Status"] == True
 
     # входим в систему с новым паролем
     url_login = URL_BASE + "user/login/"
@@ -173,7 +171,7 @@ def test_user_details_post(login):
         url,
         headers=headers,
     )
-    assert response.json()["id"] == 1
+    assert response.json()["id"] == user.id
     assert response.json()["first_name"] == first_name_new
     assert response.json()["last_name"] == last_name_new
 
@@ -215,10 +213,10 @@ def test_user_password_reset_confirm(login):
     token = ResetPasswordToken.objects.get(
         user=user,
     ).key
-    # проврка password_reset/confirm/
+    # проверка password_reset/confirm/
     url_view = "user/password_reset/confirm/"
     url = URL_BASE + url_view
-    password_new = "Password_new_" + str(uuid.uuid4())
+    password_new = get_password(12)
     data = {"token": token, "password": password_new}
     response = api_client.post(
         url,

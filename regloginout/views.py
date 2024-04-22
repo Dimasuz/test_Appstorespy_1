@@ -3,6 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema
 from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -20,6 +21,8 @@ class RegisterAccount(APIView):
     """
     User registration
     """
+
+    permission_classes = (AllowAny,)
 
     # Регистрация методом POST
     def post(self, request, *args, **kwargs):
@@ -77,6 +80,8 @@ class ConfirmAccount(APIView):
     Класс для подтверждения почтового адреса
     """
 
+    permission_classes = (AllowAny,)
+
     # Подтверждение почтового адреса методом POST
     def post(self, request, *args, **kwargs):
 
@@ -109,6 +114,8 @@ class LoginAccount(APIView):
     """
     Класс для логина пользователей
     """
+
+    permission_classes = (AllowAny,)
 
     # Login методом POST
     def post(self, request, *args, **kwargs):

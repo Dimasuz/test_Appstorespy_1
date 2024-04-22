@@ -1,9 +1,9 @@
-import os
 import warnings
 
 import pytest
+from mongoengine import DoesNotExist
 
-from uploader.models import UploadFile
+from uploader_mongo.models import UploadFileMongo
 
 from .conftest import URL_BASE
 
@@ -11,12 +11,11 @@ warnings.filterwarnings(action="ignore")
 
 pytestmark = pytest.mark.django_db
 
-url_view = f'file/'
+url_view = f'file/mongo/'
 url = URL_BASE + url_view
 
-# file/upload/
-# @pytest.mark.parametrize("tmp_file", ["txt", "exe"], indirect=True)
-@pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
+# upload/mongo/ POST
+@pytest.mark.parametrize("tmp_file", ["txt", "exe"], indirect=True)
 def test_upload(login, tmp_file):
     """POST"""
     api_client, user, token = login
@@ -24,19 +23,21 @@ def test_upload(login, tmp_file):
     with open(tmp_file, 'rb') as file:
         data = {"file": file, 'sync_mode': True,}
         response = api_client.post(url, headers=headers, data=data,)
+        file.seek(0)
+        file_bytes = file.read()
+
     file_id = response.json()['File_id']
-    uploaded_file = UploadFile.objects.all().filter(pk=file_id)[0]
-    file_path = uploaded_file.file.path
+    uploaded_file = UploadFileMongo.objects.get(pk=file_id)
+    uploaded_file_bytes = uploaded_file.file.read()
+    uploaded_file.delete()
 
     assert response.status_code == 201
     assert response.json()['Status'] == True
-    assert type(response.json()['File_id']) == int
-    assert uploaded_file.file
-
-    # clear disk
-    os.remove(file_path)
+    assert response.json()['File_id'] == str(uploaded_file.id)
+    assert uploaded_file_bytes == file_bytes
 
 
+# file/mongo/ POST - no authorization user
 @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
 def test_upload_not_authorization(login, tmp_file):
     api_client, user, token = login
@@ -50,11 +51,10 @@ def test_upload_not_authorization(login, tmp_file):
         data = {"file": file, 'sync_mode': True,}
         response = api_client.post(url, headers=headers, data=data,)
 
-    # assert response.status_code == 403
     assert response.status_code == 401
 
 
-# file/download/
+# file/mongo/ GET
 @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
 def test_download(login, tmp_file):
     # prepare file by POST
@@ -65,21 +65,22 @@ def test_download(login, tmp_file):
         response = api_client.post(url, headers=headers, data=data,)
         file_id = response.json()['File_id']
         file_upload.seek(0)
+        file_upload_bytes = file_upload.read()
 
-        """GET"""
-        data = {'file_id': file_id,}
-        response = api_client.get(url, headers=headers, data=data,)
+    """GET"""
+    data = {'file_id': file_id,}
+    response = api_client.get(url, headers=headers, data=data,)
+    # if now delete file in mongo so response.getvalue() not work
+    response_bytes = response.getvalue()
 
-        assert response.status_code == 200
-        assert file_upload.read() == response.getvalue()
+    download_file = UploadFileMongo.objects.get(pk=file_id)
+    download_file.delete()
 
-    # clear disk
-    uploaded_file = UploadFile.objects.all().filter(pk=file_id)[0]
-    file_path = uploaded_file.file.path
-    os.remove(file_path)
+    assert response.status_code == 200
+    assert file_upload_bytes == response_bytes
 
 
-# file/download/ - wrong user
+# file/mongo/ GET - wrong user
 @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
 def test_download_wrong_user(login, tmp_file, create_token):
     # prepare file
@@ -96,16 +97,15 @@ def test_download_wrong_user(login, tmp_file, create_token):
     data = {'file_id': file_id, }
     response = api_client.get(url, headers=headers, data=data,)
 
-    # clear disk
-    uploaded_file = UploadFile.objects.all().filter(pk=file_id)[0]
-    file_path = uploaded_file.file.path
-    os.remove(file_path)
+    upload_file = UploadFileMongo.objects.get(pk=file_id)
+    upload_file.delete()
 
     assert response.status_code == 403
     assert not response.json()['Status']
     assert response.json()['Error'] == 'You try to get not yours file.'
 
 
+# file/mongo/ PUT
 @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
 def test_processing_file(login, tmp_file):
     # prepare file
@@ -120,16 +120,15 @@ def test_processing_file(login, tmp_file):
     data = {'file_id': file_id, }
     response = api_client.put(url, headers=headers, data=data,)
 
+    upload_file = UploadFileMongo.objects.get(pk=file_id)
+    upload_file.delete()
+
     assert response.status_code == 201
     assert response.json()['Status']
     assert response.json()['Task_id']
 
-    # clear disk
-    uploaded_file = UploadFile.objects.all().filter(pk=file_id)[0]
-    file_path = uploaded_file.file.path
-    os.remove(file_path)
 
-
+# file/mongo/ DELETE
 @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
 def test_delete_file(login, tmp_file):
     # prepare file
@@ -140,55 +139,27 @@ def test_delete_file(login, tmp_file):
         response = api_client.post(url, headers=headers, data=data, )
         file_id = response.json()['File_id']
 
-    uploaded_file = UploadFile.objects.get(pk=file_id)
-    file_path = uploaded_file.file.path
-
-    assert os.path.isfile(file_path)
+    """GET"""
+    data = {'file_id': file_id,}
+    response = api_client.get(url, headers=headers, data=data,)
+    response_get_status_code = response.status_code
 
     """DELETE"""
-    data = {'file_id': file_id, }
-    response = api_client.delete(url, headers=headers, data=data, )
+    response = api_client.delete(url, headers=headers, data=data,)
 
+    # check file exist in mongo
+    try:
+        uploader_file = UploadFileMongo.objects.get(pk=file_id)
+    except DoesNotExist as ex:
+        uploader_file = str(ex)
+    else:
+        uploader_file.delete()
+
+    assert response_get_status_code == 200
     assert response.status_code == 200
     assert response.json()['Status']
-    assert response.json()['Files_deleted'] == 1
-    assert not os.path.isfile(file_path)
+    assert uploader_file == 'UploadFileMongo matching query does not exist.'
 
 
-# # # запрос статуса Селери в pytest почему-то возвращает None
-# # # хотя через Postman все работает даже с таской из pytest
-# # # celery_status/
-# # @pytest.mark.parametrize("tmp_file", ["txt"], indirect=True)
-# # def test_celery_status(api_client, create_token, tmp_file):
-# #     # preparation test file
-# #     url_view = 'file/upload/'
-# #     url = URL_BASE + url_view
-# #     headers = {'Authorization': f"Token {create_token}", }
-# #     with open(tmp_file) as file:
-# #         data = {"file": file, }
-# #         response = api_client.post(url, headers=headers, data=data,)
-# #     task_id = response.json()['Task_id']
-# #     print(task_id)
-# #     file = response.json()['File']
-# #     print(file)
-# #     # check celery_status/
-# #     url_view = 'celery_status/'
-# #     url = URL_BASE + url_view
-# #     celery_status = "PENDING"
-# #     while celery_status == "PENDING":
-# #         response = api_client.get(url, params={'task_id': task_id})
-# #         # здесь выдает ошибку:
-# #         # "AssertionError: Expected a `Response`, `HttpResponse` or `HttpStreamingResponse`
-# #         # to be returned from the view, but received a `<class 'NoneType'"
-# #         # и запрос статуса Селери в pytest почему-то возвращает None,
-# #         # хотя через Postman все работает даже с таской из pytest
-# #         celery_status = response.json()['Status']
-# #         time.sleep(1)
-# #     os.remove(file)
-# #     assert celery_status in ['PENDING', 'STARTED', 'SUCCESS']
-# #     assert response.status_code == 201
-#
-#
-# # pytest --ignore=tests/test_regloginout.py
-
-# pytest tests/test_uploader.py
+# pytest --ignore=tests/test_regloginout.py
+# pytest tests/test_uploader_mongo.py
