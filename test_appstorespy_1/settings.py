@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     # apps
     "regloginout",
     "uploader",
+    "uploader_mongo",
     "drf_spectacular",
     "drf_spectacular_sidecar",
     # The following apps are required for allauth:
@@ -117,14 +118,14 @@ WSGI_APPLICATION = "test_appstorespy_1.wsgi.application"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES_ALL = {
-    "sqlite": {
+    'sqlite': {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
         "OPTIONS": {
             "timeout": 20,
         },
     },
-    "postgresql": {
+    'postgresql': {
         "ENGINE": "django.db.backends.postgresql",
         "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "NAME": os.environ.get("POSTGRES_NAME", "postgres"),
@@ -132,15 +133,6 @@ DATABASES_ALL = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "password"),
         "PORT": int(os.environ.get("POSTGRES_PORT", "5432")),
     },
-    # "mongo": {
-    #         'ENGINE': 'djongo',
-    #         'NAME': 'mongo_db',
-    #         'ENFORCE_SCHEMA': False,
-    #         'CLIENT': {
-    #             # 'host': 'mongodb+srv://ddd:123@127.0.0.1:27017/files?authSource=admin',
-    #             'host': 'mongodb://ddd:123@127.0.0.1:27017/files?authSource=admin',
-    #         },
-    # }
 }
 
 DATABASES = {

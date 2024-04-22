@@ -14,6 +14,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path(f"api/{api_vertion}/", include("regloginout.urls", namespace="regloginout")),
     path(f"api/{api_vertion}/", include("uploader.urls", namespace="uploader")),
+    path(f"api/{api_vertion}/", include("uploader_mongo.urls", namespace="uploader_mongo")),
     path(
         f"api/{api_vertion}/celery_status/",
         CeleryStatus.as_view(),

@@ -31,6 +31,29 @@ def api_client():
     return APIClient()
 
 
+# fixture for Multiple Test Databases https://merit-network.github.io/django-pytest-multi-database/
+@pytest.fixture(autouse=True, scope='session')
+def django_db_multiple():
+    """
+    Ensure all test functions using Django test cases have
+    multiple database rollback support.
+    """
+    from _pytest.monkeypatch import MonkeyPatch
+    from django.conf import settings
+    from django.test import TestCase
+    from django.test import TransactionTestCase
+
+    db_keys = set(settings.DATABASES.keys())
+
+    monkeypatch = MonkeyPatch()
+    monkeypatch.setattr(TestCase, 'databases', db_keys)
+    monkeypatch.setattr(TransactionTestCase, 'databases', db_keys)
+
+    yield monkeypatch
+
+    monkeypatch.undo()
+
+
 # фикстура для регистрации и получения ConfirmEmailToken
 @pytest.fixture
 def register_user(api_client):

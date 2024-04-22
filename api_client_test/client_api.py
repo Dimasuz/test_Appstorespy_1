@@ -211,10 +211,12 @@ def password_reset_confirm(token=None, password=None):
 # ------------------------------------
 # UPLOAD FILE
 
+# add_url_file_view = ""
+add_url_file_view = "mongo/"
 
 # file/upload/
 def upload(token=None, data=None):
-    url_view = f"file/"
+    url_view = f"file/{add_url_file_view}"
     if not token:
         token = input("Введите token пользователя = ")
     headers = get_headers(token=token)
@@ -244,11 +246,11 @@ def download(
     token=None,
     file_id=None,
 ):
-    url_view = "file/"
+    url_view = f"file/{add_url_file_view}"
     if not token:
         token = input("Введите token пользователя = ")
     if not file_id:
-        file_id = int(input("Введите file_id = "))
+        file_id = input("Введите file_id = ")
     headers = get_headers(token=token)
     params = {
         "file_id": file_id,
@@ -260,15 +262,24 @@ def download(
         params=params,
     )
     if response.status_code == 200:
-        downloaded_file_name = f"test_{response.text[9:28]}_download_file.txt"
+
+        filename = response.headers.get('Content-Disposition')
+        start_index = filename.find('filename=') + 10
+        filename = filename[start_index:-1]
+
+        # downloaded_file_name = f"test_{response.text[9:28]}_download_file.txt"
+        downloaded_file_time = str(datetime.now())
+        downloaded_file_name = f"test_{filename}_download_time_{downloaded_file_time[:19]}.txt"
         CURR_DIR = os.path.dirname(os.path.realpath(__file__))
         downloaded_file = os.path.join(CURR_DIR, downloaded_file_name)
+
         with open(downloaded_file, "wb+") as f:
             f.write(response.content)
+            # f.write(filename.encode('utf-8'))
         print("File downloaded:")
         with open(downloaded_file, "rb") as f:
             print(f.read())
-        time.sleep(10)
+        # time.sleep(5)
         if input("Удалить скаченный файл? Y: "):
             os.remove(downloaded_file)
             print("File deleted")
@@ -278,7 +289,7 @@ def download(
 
 # file/processing/
 def processing(token=None, file_id=None):
-    url_view = "file/"
+    url_view = f"file/{add_url_file_view}"
     if not token:
         token = input("Введите token пользователя = ")
     if not file_id:
@@ -299,7 +310,7 @@ def processing(token=None, file_id=None):
 
 # file/delete/
 def file_delete(token=None, file_id=None):
-    url_view = "file/"
+    url_view = f"file/{add_url_file_view}"
     if not token:
         token = input("Введите token пользователя = ")
     if not file_id:
@@ -440,42 +451,51 @@ def api_test(token=None, url_store="disk"):
 
         if a == "0":
             # email = input("Введите {адрес} @mail.ru: ")
-            email = str(uuid.uuid4()) + "@mail.ru"
-            print(f'email пользователя - {email}')
-            password = f"Password_{email}"
-            _, token = user_register(email=email, password=password)
-            confirm(email=email, token=token)
-            token = login(email=email)
-            print(f"{token=}")
+            # email = str(uuid.uuid4()) + "@mail.ru"
+            # print(f'email пользователя - {email}')
+            # password = f"Password_{email}"
+            # _, token = user_register(email=email, password=password)
+            # confirm(email=email, token=token)
+            # token = login(email=email)
+            # print(f"{token=}")
             print("Загрузка файла.")
-            file_id = upload(token=token).json()["File_id"]
-            print(f"{file_id=}")
-            print(f"Скачивание файла с id - {file_id}.")
-            download(
-                token=token,
-                file_id=file_id,
-            )
+            data = {'sync_mode': False}
+            file_id = upload(token=token, data=data).json()["File_id"]
+            print(f"Загружен файл с {file_id=}")
+            print()
+            # print(f"Скачивание файла с id - {file_id}.")
+            # download(
+            #     token=token,
+            #     file_id=file_id,
+            # )
+            print()
             print(f"Обработка файла с id - {file_id}.")
             task_id = processing(token=token, file_id=file_id)
             print(task_id.json())
             task_id = task_id.json()["Task_id"]
             print(f"Запрос таски - {task_id}.")
             print(celery_status(task_id=task_id))
+            print()
+            time.sleep(11)
+            print(f"Запрос таски - {task_id}.")
+            print(celery_status(task_id=task_id))
+            print()
             print(f"Скачивание файла с id - {file_id}.")
             download(
                 token=token,
                 file_id=file_id,
             )
-            input("Удаление файла и пользователя.")
+            print()
+            # input("Удаление файла и пользователя.")
             print(f"Удаление файла с id - {file_id}.")
             file_delete(token=token, file_id=file_id)
-            print(f"Удаление из базы пользователя.")
-            delete(token=token)
+            # print(f"Удаление из базы пользователя.")
+            # delete(token=token)
         elif a == "1":
             print(f"Загрузка файла.")
-            # data = {'sync_mode': True}
-            # upload(token=token, data=data)
-            upload(token=token)
+            data = {'sync_mode': False}
+            upload(token=token, data=data)
+            # upload(token=token)
         elif a == "2":
             print(f"Обработка файла.")
             file_id = input("file_id = ")
@@ -498,7 +518,7 @@ def api_test(token=None, url_store="disk"):
 
 
 if __name__ == "__main__":
-    token = "1a9f43d1c7766238f39ce870fc332cb469f541e3"
+    token = "9d58cc030adf6856266b12d2f2deda75e64f2127"
 
     # url_list = ['disk', 'db']
     # url_store = url_list[1]
