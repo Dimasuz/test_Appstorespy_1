@@ -243,3 +243,4 @@ def test_user_password_reset_confirm(login):
 # >>> pytest
 # tests coverage
 # >>> pytest --cov=test_appstorespy_1
+# pytest tests/test_regloginout.py

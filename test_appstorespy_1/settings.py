@@ -113,7 +113,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "test_appstorespy_1.wsgi.application"
 
-
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
@@ -399,4 +398,3 @@ SPECTACULAR_DEFAULTS = {
     'OAUTH2_REFRESH_URL': None,
     'OAUTH2_SCOPES': None,
 }
-

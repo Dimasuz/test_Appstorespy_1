@@ -2,4 +2,4 @@ FROM dimasuz/ubuntu2004_python310:v3
 
 COPY . /usr/src/app
 
-ENTRYPOINT bash run_celery.sh
+ENTRYPOINT bash run.sh

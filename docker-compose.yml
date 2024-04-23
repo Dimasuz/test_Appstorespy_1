@@ -14,7 +14,7 @@ services:
     image: redis:7.2
     container_name: redis
     ports:
-      - "6379:6379"
+      - "6378:6379"
     networks:
       backend:
         aliases:
@@ -32,11 +32,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-#    volumes:
-#      - ./logs:/var/log
-#      - pgdata:/var/lib/postgresql/data
-#    expose:
-#      - 5433
+    volumes:
+      - ./logs:/var/log
+      - pgdata:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     networks:
@@ -47,18 +45,15 @@ services:
   mongo:
     image: mongo:4.4.14
     restart: always
+    container_name: mongo
     ports:
       - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ddd
-      MONGO_INITDB_ROOT_PASSWORD: 123
-
-#    depends_on:
-#      - redis
-#    networks:
-#      backend:
-#        aliases:
-#          - mongo_db
+    env_file:
+      - .env
+    networks:
+      backend:
+        aliases:
+          - mongo
 
   web:
     build: .
@@ -76,9 +71,11 @@ services:
     links:
       - redis
       - postgres
+      - mongo
     depends_on:
       - redis
       - postgres
+      - mongo
     networks:
       backend:
         aliases:
@@ -101,12 +98,10 @@ services:
     depends_on:
       - redis
       - web
-#      - mongo
     networks:
       backend:
         aliases:
           - celery
-
 
   pgadmin:
     container_name: pgadmin
@@ -116,6 +111,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: "123"
       PGADMIN_CONFIG_SERVER_MODE: "False"
 #    volumes:
+#      - pgdata:/var/lib/pgadmin
 #      - ./pgadmin:/var/lib/pgadmin
     ports:
       - "5050:80"
@@ -132,20 +128,20 @@ services:
         aliases:
           - pgadmin
 
-#  nginx:
-#    build: ./nginx
-#    ports:
-#      - 1337:80
-#    container_name: nginx
-#    restart: always
-#    volumes:
-#      - static:/usr/src/app/static
-#      - media:/usr/src/app/media
-#    links:
-#      - web
-#    depends_on:
-#      - web
-#    networks:
-#      backend:
-#        aliases:
-#          - nginx
+  nginx:
+    build: ./nginx
+    ports:
+      - 1337:80
+    container_name: nginx
+    restart: always
+    volumes:
+      - static:/usr/src/app/static
+      - media:/usr/src/app/media
+    links:
+      - web
+    depends_on:
+      - web
+    networks:
+      backend:
+        aliases:
+          - nginx

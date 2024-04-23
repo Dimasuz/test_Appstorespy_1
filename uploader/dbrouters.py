@@ -14,7 +14,6 @@ class UploaderRouter:
         Attempts to read uploader models go to mongo_db.
         """
         if model._meta.app_label in self.route_app_labels:
-            # return self.db_uploader
             return 'db_uploader'
         return None
 
@@ -23,7 +22,6 @@ class UploaderRouter:
         Attempts to write uploader models go to mongo_db.
         """
         if model._meta.app_label in self.route_app_labels:
-            # return self.db_uploader
             return 'db_uploader'
         return None
 
@@ -42,10 +40,10 @@ class UploaderRouter:
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         """
         Make sure the uploaders apps only appear in the
-        'auth_db' database.
+        'db_uploader' database.
         """
         if app_label in self.route_app_labels:
-
-            # return db == self.db_uploader
             return db == 'db_uploader'
         return None
+
+# python manage.py migrate --database=db_uploader

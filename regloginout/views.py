@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.password_validation import validate_password
 from django.http import JsonResponse
+from django.shortcuts import render
 from drf_spectacular.utils import extend_schema
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
@@ -10,6 +11,10 @@ from rest_framework.views import APIView
 from regloginout.models import ConfirmEmailToken
 from regloginout.serializers import UserSerializer
 from regloginout.signals import new_user_registered
+
+
+def index(request):
+    return render(request, "regloginout/index.html")
 
 
 # decorators @extend_schema is for OPEN API

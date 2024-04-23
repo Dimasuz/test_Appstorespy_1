@@ -5,12 +5,15 @@ from django.urls import include, path
 from drf_spectacular.views import (SpectacularAPIView, SpectacularRedocView,
                                    SpectacularSwaggerView)
 
+from regloginout.views import index
 from test_appstorespy_1.settings import API_VERTION
 from uploader.views import CeleryStatus
+from django.views.generic import TemplateView
 
 api_vertion = API_VERTION
 
 urlpatterns = [
+    path('', index, name='index'),
     path("admin/", admin.site.urls),
     path(f"api/{api_vertion}/", include("regloginout.urls", namespace="regloginout")),
     path(f"api/{api_vertion}/", include("uploader.urls", namespace="uploader")),
