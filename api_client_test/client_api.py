@@ -7,8 +7,11 @@ from tempfile import NamedTemporaryFile
 
 import requests
 
-url_base = "http://0.0.0.0:8000/api/v1/"
-# url_base = 'http://127.0.0.1:8000/api/v1/'
+url_adress = "89.111.170.222:8000"
+# url_adress = "0:0:0:0"
+# url_adress = "127:0:0:1"
+url_base = f"http://{url_adress}/api/v1/"
+
 # url_base = 'http://0.0.0.0:8000/api/v1/auth0/'
 
 

@@ -6,9 +6,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Moscow
 
 RUN apt update \
-    && apt install -y tzdata python3.10 python3-pip \
+    && apt install -y tzdata python3.10 python3-pip libpq-dev\
     && python3 -m pip install --upgrade pip \
-    && apt install -y libpq-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
