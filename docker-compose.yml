@@ -1,4 +1,4 @@
-version: '3.10'
+  version: '3.10'
 
 networks:
   backend:
@@ -14,7 +14,7 @@ services:
     image: redis:7.2
     container_name: redis
     ports:
-      - "6378:6379"
+      - "6379:6379"
     networks:
       backend:
         aliases:
@@ -36,7 +36,7 @@ services:
       - ./logs:/var/log
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "5432:5432"
     networks:
       backend:
         aliases:

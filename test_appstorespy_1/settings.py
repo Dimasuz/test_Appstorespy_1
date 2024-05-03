@@ -258,12 +258,12 @@ ACCOUNT_USERNAME_REQUIRED = False
 # >
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# EMAIL_USE_TLS = True
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.mail.ru")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "test.mail.ru")
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "test@mail.ru")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "password")
-EMAIL_PORT = "465"
-EMAIL_USE_SSL = True
+EMAIL_PORT = os.environ.get("EMAIL_PORT", "000")
+# EMAIL_USE_TLS = True
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", False)
 SERVER_EMAIL = EMAIL_HOST_USER
 # добавить для устранения ошибки SMTP:550 при регистрации через allauth
 # DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

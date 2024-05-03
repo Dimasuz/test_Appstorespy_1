@@ -7,10 +7,12 @@ from tempfile import NamedTemporaryFile
 
 import requests
 
-url_adress = "89.111.170.222:8000"
+url_adress = "79.174.86.133"
+url_port = "8000"
+api_version = "api/v1"
 # url_adress = "0:0:0:0"
 # url_adress = "127:0:0:1"
-url_base = f"http://{url_adress}/api/v1/"
+url_base = f"http://{url_adress}:{url_port}/{api_version}/"
 
 # url_base = 'http://0.0.0.0:8000/api/v1/auth0/'
 
@@ -399,24 +401,24 @@ def api_test(token=None, url_store="disk"):
                 login(email=email, password=password)
         # выход из системы
         elif a == "4":
-            logout()
+            logout(token=token)
         # удаление пользователя
         elif a == "5":
-            delete()
+            delete(token=token)
 
         # запрос данных пользователя
         elif a == "6":
-            email = input("Введите {адрес} @mail.ru: ")
-            email = email + "@mail.ru"
+            # email = input("Введите {адрес} @mail.ru: ")
+            # email = email + "@mail.ru"
             # token = login(email=email)
             # details_get(token)
-            details_get()
+            details_get(token=token)
         # изменение данных пользователя
         elif a == "7":
             email = input("Введите {адрес} @mail.ru: ")
             email = email + "@mail.ru"
-            print("Входим в систему.")
-            token = login(email=email)
+            # print("Входим в систему.")
+            # token = login(email=email)
             print('Меняем данные пользователя добавив "_new".')
             password_new = f"Password_{email}_new"
             # password_new = 'new'
@@ -425,8 +427,8 @@ def api_test(token=None, url_store="disk"):
                 "last_name": f"last_name_6021185@mail.ru{email}_new",
                 "password": password_new,
             }
-            details_post(token, **data)
-            details_get(token)
+            details_post(token=token, **data)
+            details_get(token=token)
             print("Выходим из системы")
             logout()
             if input("Меняем данные пользователя обратно? Y "):
@@ -521,7 +523,7 @@ def api_test(token=None, url_store="disk"):
 
 
 if __name__ == "__main__":
-    token = "9d58cc030adf6856266b12d2f2deda75e64f2127"
+    token = "0ed93ea6a00b250a246f83c9eb70f9ba4fcc641b"
 
     # url_list = ['disk', 'db']
     # url_store = url_list[1]
