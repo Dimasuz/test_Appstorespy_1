@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     "uploader_mongo",
     "drf_spectacular",
     "drf_spectacular_sidecar",
+    # the debug toolbar
+    'debug_toolbar',
     # The following apps are required for allauth:
     "django.contrib.sites",
     "allauth",
@@ -80,6 +82,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    'debug_toolbar.middleware.DebugToolbarMiddleware', # debug toolbar middleware
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -311,11 +314,6 @@ MAX_TIME_UPLOAD_FILE = os.environ.get("MAX_TIME_UPLOAD_FILE")
 
 API_VERTION = "v1"
 
-FILE_STORE = {
-    "db": "FileInDb",
-    "disk": "FileOnDisk",
-}
-
 # SPECTACULAR_SETTINGS = {
 #     "TITLE": "Project Appstorespy API",
 #     "DESCRIPTION": "Testing task for junior python dev",
@@ -397,4 +395,11 @@ SPECTACULAR_DEFAULTS = {
     'OAUTH2_TOKEN_URL': None,
     'OAUTH2_REFRESH_URL': None,
     'OAUTH2_SCOPES': None,
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get("LOCATION_CACHE_REDIS", "redis://127.0.0.1:6379"),
+    }
 }

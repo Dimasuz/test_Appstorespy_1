@@ -7,11 +7,11 @@ from tempfile import NamedTemporaryFile
 
 import requests
 
-url_adress = "79.174.86.133"
+#url_adress = "89.111.174.130"
 url_port = "8000"
 api_version = "api/v1"
-# url_adress = "0:0:0:0"
-# url_adress = "127:0:0:1"
+#url_adress = "0:0:0:0"
+url_adress = "127.0.0.1"
 url_base = f"http://{url_adress}:{url_port}/{api_version}/"
 
 # url_base = 'http://0.0.0.0:8000/api/v1/auth0/'
@@ -523,7 +523,7 @@ def api_test(token=None, url_store="disk"):
 
 
 if __name__ == "__main__":
-    token = "0ed93ea6a00b250a246f83c9eb70f9ba4fcc641b"
+    token = "10cf48985c13b59cd8f44eef750fe3456503a0b2"
 
     # url_list = ['disk', 'db']
     # url_store = url_list[1]
