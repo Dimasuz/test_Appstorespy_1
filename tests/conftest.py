@@ -6,6 +6,7 @@ from datetime import datetime
 import pytest
 from model_bakery import baker
 from rest_framework.authtoken.models import Token
+from django.core.cache import cache
 
 from regloginout.models import ConfirmEmailToken, User
 
@@ -57,6 +58,7 @@ def django_db_multiple():
 # фикстура для регистрации и получения ConfirmEmailToken
 @pytest.fixture
 def register_user(api_client):
+    cache.clear()
     url_view = "user/register/"
     url = URL_BASE + url_view
     num = str(uuid.uuid4())
